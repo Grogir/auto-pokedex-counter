@@ -1,6 +1,6 @@
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import QPoint, Qt, QSettings
 
 from pokedex_counter.calibration_runner import run_calibration
 from pokedex_counter.camera import resolve_camera_index
@@ -65,18 +65,27 @@ def run() -> int:
     # --- UI ---
     window = MainWindow()
     settings = SettingsWindow()
+    window.close_requested.connect(app.quit)
     window.set_calibrated(bool(roi_templates))
 
     # --- persisted settings ---
     prefs = QSettings(ORGANIZATION_NAME, APP_NAME)
     settings.columns_spinbox.setValue(int(prefs.value("sprites_per_row", settings.columns_spinbox.value())))
-    settings.font_size_spinbox.setValue(int(prefs.value("counter_font_size", settings.font_size_spinbox.value())))
-    settings.compare_to_wr_checkbox.setChecked(prefs.value("compare_to_wr", settings.compare_to_wr_checkbox.isChecked(), type=bool))
-    settings.highlight_bonuses_checkbox.setChecked(prefs.value("highlight_bonuses", settings.highlight_bonuses_checkbox.isChecked(), type=bool))
     settings.columns_spinbox.valueChanged.connect(lambda v: prefs.setValue("sprites_per_row", v))
+    settings.font_size_spinbox.setValue(int(prefs.value("counter_font_size", settings.font_size_spinbox.value())))
     settings.font_size_spinbox.valueChanged.connect(lambda v: prefs.setValue("counter_font_size", v))
+    settings.compare_to_wr_checkbox.setChecked(prefs.value("compare_to_wr", settings.compare_to_wr_checkbox.isChecked(), type=bool))
     settings.compare_to_wr_checkbox.toggled.connect(lambda checked: prefs.setValue("compare_to_wr", checked))
+    settings.highlight_bonuses_checkbox.setChecked(prefs.value("highlight_bonuses", settings.highlight_bonuses_checkbox.isChecked(), type=bool))
     settings.highlight_bonuses_checkbox.toggled.connect(lambda checked: prefs.setValue("highlight_bonuses", checked))
+    window.move(prefs.value("window_position", QPoint(0, 0)))
+    app.aboutToQuit.connect(lambda: prefs.setValue("window_position", window.pos()))
+    settings.frameless_checkbox.setChecked(prefs.value("frameless", settings.frameless_checkbox.isChecked(), type=bool))
+    settings.frameless_checkbox.toggled.connect(lambda checked: prefs.setValue("frameless", checked))
+    settings.sprite_size_spinbox.setValue(int(prefs.value("sprite_size", settings.sprite_size_spinbox.value())))
+    settings.sprite_size_spinbox.valueChanged.connect(lambda v: prefs.setValue("sprite_size", v))
+    settings.sprite_padding_spinbox.setValue(int(prefs.value("sprite_padding", settings.sprite_padding_spinbox.value())))
+    settings.sprite_padding_spinbox.valueChanged.connect(lambda v: prefs.setValue("sprite_padding", v))
 
     # --- WR (world record) comparison ---
     wr_sections = load_wr_sections()
@@ -118,6 +127,11 @@ def run() -> int:
 
     settings.columns_spinbox.valueChanged.connect(window.set_sprites_per_row)
     settings.font_size_spinbox.valueChanged.connect(window.set_counter_font_size)
+    settings.sprite_size_spinbox.valueChanged.connect(window.set_sprite_size)
+    settings.sprite_padding_spinbox.valueChanged.connect(window.set_sprite_padding)
+
+    window.set_frameless_flag(settings.frameless_checkbox.isChecked())
+    settings.frameless_checkbox.toggled.connect(window.on_frameless_toggled)
 
     def maybe_prompt_save_pb() -> None:
         """If the current run has the full 151, ask whether to save it as
@@ -166,6 +180,8 @@ def run() -> int:
     # --- start ---
     window.set_sprites_per_row(settings.columns_spinbox.value())
     window.set_counter_font_size(settings.font_size_spinbox.value())
+    window.set_sprite_size(settings.sprite_size_spinbox.value())
+    window.set_sprite_padding(settings.sprite_padding_spinbox.value())
     if settings.compare_to_wr_checkbox.isChecked():
         apply_wr_up_to_current()
     capture.start()

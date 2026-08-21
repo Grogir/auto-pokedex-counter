@@ -1,11 +1,11 @@
 """Main application window."""
 
-from PySide6.QtCore import QTimer, Signal
-from PySide6.QtGui import QResizeEvent, QFontDatabase, QFont
+from PySide6.QtCore import QTimer, Qt, Signal
+from PySide6.QtGui import QCloseEvent, QResizeEvent, QFontDatabase, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QVBoxLayout,
+    QGridLayout,
     QLabel
 )
 
@@ -21,6 +21,8 @@ CALIBRATION_NEEDED_MESSAGE = (
 
 
 class MainWindow(QMainWindow):
+    close_requested = Signal()
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(APP_NAME)
@@ -32,9 +34,15 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, self._sync_height_to_width)
 
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.close_requested.emit()
+        event.accept()
+
     def _build_ui(self) -> None:
         self._central_widget = QWidget()
-        layout = QVBoxLayout(self._central_widget)
+        layout = QGridLayout(self._central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         self.sprite_strip = SpriteStrip(SPRITES_DIR)
 
@@ -42,13 +50,15 @@ class MainWindow(QMainWindow):
 
         self.sprite_strip.count_changed.connect(self._update_counter)
         self.counter_label = QLabel("0")
-        self.counter_label.setStyleSheet("margin-top: 10px;")
+        self.counter_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.counter_label.setContentsMargins(1, 1, 1, 1)
+        self.counter_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font_id = QFontDatabase.addApplicationFont(str(FONTS_DIR / "Pokemon Solid.ttf"))
         families = QFontDatabase.applicationFontFamilies(font_id)
         self._counter_font_family = families[0] if families else self.counter_label.font().family()
         self._apply_counter_font(self._counter_font_size)
 
-        layout.addWidget(self.counter_label)
+        layout.addWidget(self.counter_label, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
 
         self.setCentralWidget(self._central_widget)
 
@@ -59,11 +69,16 @@ class MainWindow(QMainWindow):
         font = QFont(self._counter_font_family)
         font.setPointSize(points)
         self.counter_label.setFont(font)
+        if self._calibrated:
+            self.counter_label.setFixedHeight(self.counter_label.fontMetrics().ascent() + 3)
+        else:
+            self.counter_label.setMinimumHeight(0)
+            self.counter_label.setMaximumHeight(16777215)
 
     def _update_counter(self, value: int):
         if not self._calibrated:
             return
-        self.counter_label.setText(f"{value} caught")
+        self.counter_label.setText(f" {value}")
 
     def set_calibrated(self, calibrated: bool) -> None:
         """Toggle between the normal "N caught" counter and a prompt to
@@ -82,13 +97,22 @@ class MainWindow(QMainWindow):
 
     def set_sprites_per_row(self, columns: int) -> None:
         self.sprite_strip.set_columns(columns)
+        self.refresh_size()
 
+    def refresh_size(self) -> None:
         width = self.sprite_strip.natural_width()
         if width > 0:
             margins = self._central_widget.layout().contentsMargins()
             self.setFixedWidth(width + margins.left() + margins.right())
-
         QTimer.singleShot(0, self._sync_height_to_width)
+
+    def set_sprite_size(self, size: int) -> None:
+        self.sprite_strip.set_sprite_size(size)
+        self.refresh_size()
+
+    def set_sprite_padding(self, size: int) -> None:
+        self.sprite_strip.set_sprite_padding(size)
+        self.refresh_size()
 
     def set_counter_font_size(self, points: int) -> None:
         self._counter_font_size = points
@@ -109,3 +133,28 @@ class MainWindow(QMainWindow):
 
         if target_height != self.height():
             self.resize(self.width(), target_height)
+
+    def set_frameless_flag(self, checked: bool) -> None:
+        if checked:
+            self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
+        else:
+            self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowCloseButtonHint | Qt.WindowType.MSWindowsFixedSizeDialogHint)
+
+    def on_frameless_toggled(self, checked: bool) -> None:
+        self.set_frameless_flag(checked)
+        self.show()
+        self.resize(300, 600)
+
+    def mousePressEvent(self, event):
+        """Intercepte le clic de souris initial."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Calcule la distance entre le clic global et le coin supérieur gauche de la fenêtre
+            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        """Déplace la fenêtre lorsque la souris glisse."""
+        if event.buttons() == Qt.MouseButtons.LeftButton:
+            # Déplace la fenêtre en soustrayant le décalage initial
+            self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()

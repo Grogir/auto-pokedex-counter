@@ -10,21 +10,22 @@ from PySide6.QtWidgets import (
 class ClickableLabel(QLabel):
     clicked = Signal(Path)
 
-    BASE_STYLE = "padding: 3px;"
-
     def __init__(self, path: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._path = path
+        self._padding = 0
         self._selected = False
         self._wr_marked = False
         self._catch_color = "black"
-        self.setStyleSheet(self.BASE_STYLE)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self.toggle_selected()
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        event.accept()
 
     def toggle_selected(self) -> None:
         self._selected = not self._selected
@@ -72,10 +73,15 @@ class ClickableLabel(QLabel):
         if self._selected:
             self._apply_style()
 
+    def set_padding(self, padding):
+        self._padding = padding
+        self._apply_style()
+
     def _apply_style(self) -> None:
+        base_style = f"padding: {self._padding}px;"
         if self._selected:
-            self.setStyleSheet(self.BASE_STYLE + f"background-color: {self._catch_color};")
+            self.setStyleSheet(base_style + f"background-color: {self._catch_color};")
         elif self._wr_marked:
-            self.setStyleSheet(self.BASE_STYLE + "background-color: blue;")
+            self.setStyleSheet(base_style + "background-color: blue;")
         else:
-            self.setStyleSheet(self.BASE_STYLE)
+            self.setStyleSheet(base_style)

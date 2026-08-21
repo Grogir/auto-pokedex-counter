@@ -11,7 +11,8 @@ from PySide6.QtWidgets import QCheckBox, QFormLayout, QPushButton, QSpinBox, QVB
 
 DEFAULT_SPRITES_PER_ROW = 10
 DEFAULT_FONT_SIZE = 24
-
+DEFAULT_SPRITE_SIZE = 24
+DEFAULT_SPRITE_PADDING = 3
 
 class SettingsWindow(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -26,6 +27,16 @@ class SettingsWindow(QWidget):
         self.columns_spinbox.setValue(DEFAULT_SPRITES_PER_ROW)
         form.addRow("Sprites per row:", self.columns_spinbox)
 
+        self.sprite_size_spinbox = QSpinBox()
+        self.sprite_size_spinbox.setRange(20, 60)
+        self.sprite_size_spinbox.setValue(DEFAULT_SPRITE_SIZE)
+        form.addRow("Sprite size:", self.sprite_size_spinbox)
+
+        self.sprite_padding_spinbox = QSpinBox()
+        self.sprite_padding_spinbox.setRange(0, 10)
+        self.sprite_padding_spinbox.setValue(DEFAULT_SPRITE_PADDING)
+        form.addRow("Sprite padding:", self.sprite_padding_spinbox)
+
         self.font_size_spinbox = QSpinBox()
         self.font_size_spinbox.setRange(8, 96)
         self.font_size_spinbox.setValue(DEFAULT_FONT_SIZE)
@@ -36,6 +47,9 @@ class SettingsWindow(QWidget):
 
         self.highlight_bonuses_checkbox = QCheckBox()
         form.addRow("Highlight bonuses", self.highlight_bonuses_checkbox)
+
+        self.frameless_checkbox = QCheckBox()
+        form.addRow("Remove title bar", self.frameless_checkbox)
 
         layout.addLayout(form)
 

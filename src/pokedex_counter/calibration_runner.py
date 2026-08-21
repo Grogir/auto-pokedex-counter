@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import numpy
 
 from pokedex_counter.config import RESOURCES_DIR
 from pokedex_counter.roi_writer import update_roi_constants
@@ -49,7 +50,7 @@ def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
     templates = {}
     for name, filename in _FILENAMES.items():
         path = calibration_dir / filename
-        img = cv2.imread(str(path))
+        img = cv2.imdecode(numpy.fromfile(path, dtype=numpy.uint8), cv2.IMREAD_COLOR)
         if img is None:
             print(f"[Calibration] ERROR: could not load reference image {path}, skipping {name}")
             continue

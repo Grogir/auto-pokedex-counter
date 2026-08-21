@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import (
     QLabel,
     QSizePolicy,
@@ -28,6 +28,7 @@ class SpriteStrip(QWidget):
         self._sprite_size = sprite_size
         self._count = 0
         self._labels_by_name: dict[str, ClickableLabel] = {}
+        self._pixmap_cache: dict[Path, QPixmap] = {}
         self._wr_enabled = False
         self._wr_names: set[str] = set()
         self._bonus_names: set[str] = set()
@@ -85,23 +86,51 @@ class SpriteStrip(QWidget):
         label.setToolTip(path.name)
         label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        pixmap = QPixmap(str(path))
-        if pixmap.isNull():
-            label.setText(f"⚠ {path.name}")
-            return label
-
-        scaled = pixmap.scaled(
-            self._sprite_size,
-            self._sprite_size,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        label.setPixmap(scaled)
+        self.draw_image_in_label(label)
 
         # IMPORTANT: connect via handler, not direct emit
         label.clicked.connect(self._on_sprite_clicked)
 
         return label
+
+    def draw_image_in_label(self, label) -> None:
+        pixmap = self._pixmap_cache.get(label._path)
+        if pixmap is None:
+            pixmap = QPixmap(str(label._path))
+            self._pixmap_cache[label._path] = pixmap
+        if pixmap.isNull():
+            label.setText(f"⚠ {label._path.name}")
+            return label
+
+        # Resize down if needed
+        size = self._sprite_size
+        if pixmap.width() > size or pixmap.height() > size:
+            pixmap = pixmap.scaled(
+                size,
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        # Create transparent image
+        canvas = QPixmap(size, size)
+        canvas.fill(Qt.GlobalColor.transparent)
+        # Draw the centered pokémon inside
+        x = (size - pixmap.width()) // 2
+        y = (size - pixmap.height()) // 2
+        painter = QPainter(canvas)
+        painter.drawPixmap(x, y, pixmap)
+        painter.end()
+
+        label.setPixmap(canvas)
+
+    def set_sprite_size(self, size) -> None:
+        self._sprite_size = size
+        for label in self._labels_by_name.values():
+            self.draw_image_in_label(label)
+
+    def set_sprite_padding(self, padding) -> None:
+        for label in self._labels_by_name.values():
+            label.set_padding(padding)
 
     def _catch_color_for(self, name: str) -> str:
         """The background a catch of `name` should get. Bonus highlighting

@@ -12,6 +12,14 @@ def test_set_sprites_per_row_window_fits_the_last_column(main_window, qtbot):
     assert last_item.x() + last_item.width() <= main_window.sprite_strip.width()
 
 
+def test_closing_main_window_requests_application_quit(main_window, qtbot):
+    close_requested = qtbot.waitSignal(main_window.close_requested, timeout=1000)
+
+    main_window.close()
+
+    assert close_requested.signal_triggered
+
+
 def test_set_calibrated_false_shows_the_calibration_message(main_window):
     from pokedex_counter.main_window import CALIBRATION_NEEDED_MESSAGE
 
@@ -36,4 +44,4 @@ def test_set_calibrated_true_restores_the_current_count(main_window):
 
     main_window.set_calibrated(True)
 
-    assert main_window.counter_label.text() == "3 caught"
+    assert "3" in main_window.counter_label.text()

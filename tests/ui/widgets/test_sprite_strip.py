@@ -18,6 +18,7 @@ import re
 import pytest
 
 from pokedex_counter.config import SPRITES_DIR
+from pokedex_counter.ui.widgets import sprite_strip as sprite_strip_module
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
 
@@ -57,6 +58,29 @@ def test_reset_deselects_everything_and_zeroes_the_count(sprite_strip):
 def test_reset_on_already_empty_strip_is_a_noop(sprite_strip):
     sprite_strip.reset()
     assert sprite_strip._count == 0
+
+
+def test_reload_reuses_cached_pixmaps(qtbot, monkeypatch):
+    sprite_strip = SpriteStrip(SPRITES_DIR, 64)
+    qtbot.addWidget(sprite_strip)
+    original_pixmap = sprite_strip_module.QPixmap
+    loaded_paths = []
+    sprite_strip._pixmap_cache.clear()
+
+    def tracking_pixmap(*args):
+        if len(args) == 1:
+            loaded_paths.append(args[0])
+        return original_pixmap(*args)
+
+    monkeypatch.setattr(sprite_strip_module, "QPixmap", tracking_pixmap)
+
+    sprite_strip.reload()
+    first_load_count = len(loaded_paths)
+
+    sprite_strip.reload()
+
+    assert first_load_count > 0
+    assert len(loaded_paths) == first_load_count
 
 
 # --- WR comparison colors ---

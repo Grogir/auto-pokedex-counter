@@ -68,7 +68,7 @@ def test_calibrated_roi_detects_expected_pokemon(
     detections = []
     detector.detection.connect(detections.append)
 
-    frame = cv2.imread(str(DETECTION_FIXTURES_DIR / detection_fixture))
+    frame = cv2.imdecode(np.fromfile(str(DETECTION_FIXTURES_DIR / detection_fixture), dtype=np.uint8), cv2.IMREAD_COLOR)
     assert frame is not None, f"Could not load image: {detection_fixture}"
     detector.process_frame(cv2.flip(frame, 1))
 
@@ -86,7 +86,7 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     detections = []
     detector.detection.connect(detections.append)
 
-    frame = cv2.imread(str(DETECTION_FIXTURES_DIR / "catch_01.png"))
+    frame = cv2.imdecode(np.fromfile(str(DETECTION_FIXTURES_DIR / "catch_01.png"), dtype=np.uint8), cv2.IMREAD_COLOR)
     flipped = cv2.flip(frame, 1)
 
     # Same screen held across many frames (e.g. player hasn't pressed a

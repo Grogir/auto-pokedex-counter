@@ -60,7 +60,7 @@ class CalibrationService:
         start = time.time()
         print(f"[Calibration] Waiting for: {', '.join(pending)}")
         print(f"[Calibration] Minimum ROI size: {self.min_roi_size[0]}x{self.min_roi_size[1]}")
-        print("ESC to abort.\n")
+        print("ESC or the window close button to abort.\n")
 
         try:
             while pending:
@@ -122,9 +122,10 @@ class CalibrationService:
                     pending.pop(name)
                     candidates.pop(name, None)
 
-                cv2.imshow("Calibration", display)
-
-                if cv2.waitKey(1) & 0xFF == 27:
+                window_name = "Calibration"
+                cv2.imshow(window_name, display)
+                key = cv2.waitKey(1) & 0xFF
+                if key == 27 or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
                     print("[Calibration] Aborted by user.")
                     break
         finally:

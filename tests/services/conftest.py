@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import cv2
+import numpy
 import pytest
 
 from pokedex_counter.config import RESOURCES_DIR
@@ -20,7 +21,7 @@ FIXTURE_FILENAMES = ["calibration_01.png", "calibration_02.png"]
 
 
 def load_gray(path: Path):
-    img = cv2.imread(str(path))
+    img = cv2.imdecode(numpy.fromfile(path, dtype=numpy.uint8), cv2.IMREAD_COLOR)
     assert img is not None, f"Could not load image: {path}"
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
