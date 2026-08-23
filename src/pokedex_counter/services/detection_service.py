@@ -46,14 +46,28 @@ class DetectionService(QObject):
             group.append((name, resized, canonical, section_index))
         self._roi_groups = roi_groups
 
+    def _section_cleared(self, section: int) -> bool:
+        """Whether every Pokemon section `section` requires has been caught.
+        An empty list would make this vacuously true, so it's rejected -
+        only the final section is allowed one, and _active_section never
+        asks about that one (see SECTION_TRIGGERS)."""
+        required = self._section_triggers[section]
+        return bool(required) and all(name in self._detected for name in required)
+
     def _active_section(self) -> int:
         """The currently active section, derived live from `_detected` (not
-        tracked incrementally) so undoing a trigger detection via forget()
-        automatically rolls the active section back too - no separate
-        mutable pointer to keep in sync."""
+        tracked incrementally) so undoing any one of a section's required
+        detections via forget() automatically rolls the active section back
+        too - no separate mutable pointer to keep in sync.
+
+        A section is only left behind once ALL of its required Pokemon are
+        caught, in whatever order they come. Advancing on a single one let a
+        player who caught it early strand the rest of the section: nothing
+        outside the active section is ever matched, so those became
+        uncatchable for the remainder of the run."""
         last = len(self._section_triggers) - 1
         section = 0
-        while section < last and self._section_triggers[section] in self._detected:
+        while section < last and self._section_cleared(section):
             section += 1
         return section
 

@@ -53,15 +53,15 @@ BONUSES: set[str] = {
 # which does NOT follow ascending dex-number order (some Pokemon are only
 # reachable well out of dex order, or via a detour). Detection only looks
 # for the Pokemon in the currently active section (see DetectionService);
-# a section's LAST entry is the trigger that advances to the next section.
-# Order otherwise within a section doesn't matter. A dex number may repeat
+# what advances to the next one is SECTION_TRIGGERS, not position in this
+# list, so order within a section doesn't matter. A dex number may repeat
 # across sections if it can legitimately be caught in more than one of
 # them.
 CATCH_SECTIONS_RAW: list[list[str]] = [
     ["1", "16", "10", "50", "51", "46", "29", "32", "102", "23", "122"],
     ["76", "97", "42", "28", "47", "64", "82", "40", "128", "113", "101",
      "85", "49", "26", "65", "112", "105", "150", "115"],
-    ["82", "90", "54", "55", "42", "98", "99", "86", "87", "120", "129", "144"],
+    ["90", "54", "55", "42", "98", "99", "86", "87", "120", "129", "144"],
     ["66", "67", "74", "75", "42", "105", "49", "41", "95", "67", "68", "123"],
     ["21", "96", "27", "107", "58", "50", "109", "146", "11", "48"],
     ["92", "126", "94", "22", "37", "19", "20", "17", "72", "4", "114"],
@@ -83,13 +83,6 @@ SECTION_EVOLVE_OVERRIDES: dict[int, set[str]] = {
     10: {"148", "93", "24", "64", "34", "36"},  # section 11 (0-indexed 10)
     11: {"93", "24", "64", "34", "36"},  # dedicated evolution section - same five, listed again here
 }
-
-# The dex number whose detection advances to the next section. The final
-# section has none - there's nothing left to advance to.
-SECTION_TRIGGERS: list[str | None] = [
-    names[-1] if idx < len(CATCH_SECTIONS_RAW) - 1 else None
-    for idx, names in enumerate(CATCH_SECTIONS_RAW)
-]
 
 
 def _entry_type(section_index: int, name: str) -> str:
@@ -115,6 +108,60 @@ def build_catch_sections() -> list[list[tuple[str, str]]]:
 
 
 CATCH_SECTIONS: list[list[tuple[str, str]]] = build_catch_sections()
+
+
+def build_section_triggers() -> list[list[str]]:
+    """The dex numbers that must ALL be caught before the run moves on to
+    the next section: every Pokemon this is the LAST section to offer.
+    Order among them doesn't matter - the section ends once none are left.
+
+    This replaced a single trigger, taken as the section's last entry, which
+    quietly assumed the route is always walked in order. Catching that one
+    Pokemon early ended the section while the rest were still uncaught, and
+    DetectionService only ever matches the active section's templates (see
+    _active_section), so anything skipped that way stayed invisible for the
+    rest of the run.
+
+    Keying on the last chance rather than on the whole section is what makes
+    this safe for a dex number the route offers more than once: requiring it
+    the first time round would stall a run that legitimately saves it for
+    later, but by its final appearance there is no later left to save it
+    for. Catching it early still counts - the check is just membership in
+    what's been detected, so an earlier catch satisfies it immediately.
+
+    Sections are read from CATCH_SECTIONS rather than CATCH_SECTIONS_RAW so
+    the final section's swept-in evolutions count as an appearance too: a
+    Pokemon catchable early but evolvable at the end has its last chance
+    there, and so holds no earlier section open.
+
+    BONUSES are excluded outright. A bonus is an optional wild catch of
+    something you'd otherwise evolve into, so the section has to end whether
+    or not it was taken. Today every bonus is also an evolution, so the rule
+    above would already drop it - but one that isn't would silently become
+    mandatory.
+
+    Derived rather than hand-listed so re-authoring the route can't leave a
+    stale trigger behind. The final section gets an empty list; there's
+    nothing left to advance to."""
+    last_chance: dict[str, int] = {}
+    for section_index, section in enumerate(CATCH_SECTIONS):
+        for name, _roi_label in section:
+            if name not in BONUSES:
+                last_chance[name] = section_index
+
+    triggers = [
+        [
+            name
+            for name in dict.fromkeys(name for name, _roi_label in section)
+            if last_chance.get(name) == section_index
+        ]
+        for section_index, section in enumerate(CATCH_SECTIONS)
+    ]
+    triggers[-1] = []
+    return triggers
+
+
+SECTION_TRIGGERS: list[list[str]] = build_section_triggers()
 
 
 def build_evolution_entries() -> list[set[str]]:

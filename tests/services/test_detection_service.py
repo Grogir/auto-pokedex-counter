@@ -47,12 +47,14 @@ def _roi_templates_for(calibration_fixture, sprite_templates, calibrated_rois):
 
 def _prime_to_section(detector, section_index):
     """Simulate the run having already progressed to `section_index`, by
-    marking every earlier section's trigger as already detected.
+    marking every earlier section's required Pokemon as already detected.
     DetectionService only matches templates in its current active section
     (see roi_config.py's CATCH_SECTIONS/SECTION_TRIGGERS), so a cold
     detector can't see a later section's Pokemon in isolation the way
     these fixtures test them."""
-    detector._detected.update(t for t in detector._section_triggers[:section_index] if t is not None)
+    detector._detected.update(
+        name for names in detector._section_triggers[:section_index] for name in names
+    )
 
 
 @pytest.mark.parametrize(
@@ -127,7 +129,7 @@ def test_entries_outside_active_section_are_excluded_until_trigger_fires():
     roi_templates = [(name_a, roi, _pattern(1), 0), (name_b, roi, _pattern(2), 1)]
 
     detector = DetectionService(roi_templates)
-    detector._section_triggers = [name_a, None]  # detecting "A" advances to section 1
+    detector._section_triggers = [[name_a], []]  # detecting "A" advances to section 1
     detections = []
     detector.detection.connect(detections.append)
 
@@ -147,13 +149,68 @@ def test_entries_outside_active_section_are_excluded_until_trigger_fires():
     assert detections == [name_a, name_b]
 
 
+def test_a_section_holds_until_every_required_pokemon_is_caught():
+    """The bug this mechanic replaced: advancing on one Pokemon meant
+    catching it out of order ended the section early, and since nothing
+    outside the active section is ever matched, whatever was still
+    outstanding became uncatchable for the rest of the run."""
+    roi = (0, 0, 20, 20)
+    early, straggler, next_section = "EARLY", "STRAGGLER", "NEXT"
+    roi_templates = [
+        (early, roi, _pattern(1), 0),
+        (straggler, roi, _pattern(2), 0),
+        (next_section, roi, _pattern(3), 1),
+    ]
+
+    detector = DetectionService(roi_templates)
+    detector._section_triggers = [[early, straggler], []]
+    detections = []
+    detector.detection.connect(detections.append)
+
+    # "EARLY" out of order: the section must NOT end, since "STRAGGLER" is
+    # still outstanding.
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(1)))
+    assert detections == [early]
+    assert detector.current_section() == 0
+
+    # Section 1's Pokemon is a perfect pixel match but still out of scope.
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(3)))
+    assert detections == [early]
+
+    # The straggler is still reachable - that's the whole point.
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(2)))
+    assert detections == [early, straggler]
+    assert detector.current_section() == 1
+
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(3)))
+    assert detections == [early, straggler, next_section]
+
+
+def test_forgetting_any_one_required_pokemon_rolls_the_section_back():
+    """forget() has to undo the advance no matter which of the required
+    Pokemon was the misdetection, not just the last one."""
+    roi = (0, 0, 20, 20)
+    first, second = "FIRST", "SECOND"
+    roi_templates = [(first, roi, _pattern(1), 0), (second, roi, _pattern(2), 0)]
+
+    detector = DetectionService(roi_templates)
+    detector._section_triggers = [[first, second], []]
+
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(1)))
+    detector.process_frame(_frame_with_pattern_at(roi, _pattern(2)))
+    assert detector.current_section() == 1
+
+    detector.forget(first)
+    assert detector.current_section() == 0
+
+
 def test_forgetting_the_trigger_rolls_back_the_active_section():
     roi = (0, 0, 20, 20)
     name_a, name_b = "A", "B"
     roi_templates = [(name_a, roi, _pattern(1), 0), (name_b, roi, _pattern(2), 1)]
 
     detector = DetectionService(roi_templates)
-    detector._section_triggers = [name_a, None]
+    detector._section_triggers = [[name_a], []]
     detections = []
     detector.detection.connect(detections.append)
 

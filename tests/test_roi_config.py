@@ -97,11 +97,73 @@ def test_every_dex_number_has_at_least_one_detection_path():
 
 
 def test_section_triggers_are_members_of_their_own_section():
-    for section_index, trigger in enumerate(SECTION_TRIGGERS):
-        if trigger is None:
-            continue
+    for section_index, required in enumerate(SECTION_TRIGGERS):
         names_in_section = {name for name, _roi_label in CATCH_SECTIONS[section_index]}
-        assert trigger in names_in_section
+        assert set(required) <= names_in_section, (
+            f"section {section_index} requires {sorted(set(required) - names_in_section)}, "
+            "which it never offers - the run would stall there"
+        )
+
+
+def test_every_section_but_the_last_can_be_advanced_past():
+    """An empty list would strand the run on that section forever (see
+    DetectionService._section_cleared, which refuses to treat "nothing
+    required" as cleared). Only the final section may have one."""
+    for section_index, required in enumerate(SECTION_TRIGGERS[:-1]):
+        assert required, f"section {section_index} has no way to advance"
+    assert SECTION_TRIGGERS[-1] == []
+
+
+def test_a_trigger_is_never_catchable_in_a_later_section():
+    """A dex number the route offers again later may legitimately be saved
+    for then, so requiring it early would stall a run that does. It's only
+    required in its LAST section - by then there's no later chance left."""
+    catchable_in = defaultdict(set)
+    for section_index, section in enumerate(CATCH_SECTIONS):
+        for name, _roi_label in section:
+            catchable_in[name].add(section_index)
+
+    for section_index, required in enumerate(SECTION_TRIGGERS):
+        for name in required:
+            later = {s for s in catchable_in[name] if s > section_index}
+            assert not later, (
+                f"section {section_index} requires {name}, but it's still catchable in "
+                f"{sorted(later)} - a run saving it for then would never advance"
+            )
+
+
+def test_every_pokemon_is_required_by_its_last_chance():
+    """The flip side: nothing may quietly stop being required. Anything
+    whose last appearance is before the final section has to gate it, or
+    catching it could be skipped without the run ever noticing."""
+    last_chance = {}
+    for section_index, section in enumerate(CATCH_SECTIONS):
+        for name, _roi_label in section:
+            last_chance[name] = section_index
+
+    final = len(CATCH_SECTIONS) - 1
+    for name, section_index in last_chance.items():
+        if section_index == final or name in BONUSES:
+            continue  # the final section gates nothing; bonuses are optional
+        assert name in SECTION_TRIGGERS[section_index], (
+            f"{name} is last offered in section {section_index} but doesn't gate it"
+        )
+
+
+def test_a_bonus_never_gates_a_section():
+    """A bonus is an optional wild catch, so the section has to end whether
+    or not the player took it. Every bonus is currently also an evolution,
+    which keeps it out of the triggers anyway - this guards the case where
+    that stops being true and one silently turns mandatory."""
+    for section_index, required in enumerate(SECTION_TRIGGERS):
+        assert not set(required) & BONUSES, (
+            f"section {section_index} requires bonus {sorted(set(required) & BONUSES)}, "
+            "which the run is free to skip - it would never advance"
+        )
+
+
+def test_section_triggers_covers_every_section():
+    assert len(SECTION_TRIGGERS) == len(CATCH_SECTIONS)
 
 
 def test_bonuses_are_dex_numbers():
