@@ -3,9 +3,9 @@
 import sys
 from pathlib import Path
 
-APP_NAME = "Pokedex Counter"
+APP_NAME = "Pokédex Counter"
 APP_VERSION = "0.4.0"
-ORGANIZATION_NAME = "MyOrg"
+ORGANIZATION_NAME = APP_NAME
 
 # When frozen by PyInstaller, data files added via --add-data are extracted
 # to sys._MEIPASS (a temp dir) instead of living next to this module.
@@ -51,4 +51,5 @@ MIN_SHADE_SEPARATION = 15.0
 # glyphs are not, so this margin matters most for ROI_TEXT.
 ROI_SEARCH_MARGIN = 4
 
-FRAME_SIZE = (640, 360)
+FRAME_SIZE = (960, 540)
+FRAME_SIZE_CALIBRATION = (1920, 1080)

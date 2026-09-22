@@ -4,6 +4,8 @@ import numpy as np
 from pokedex_counter.config import MIN_SHADE_SEPARATION
 
 _COARSE_SAMPLES = 40
+_MIN_FRAME_HEIGHT_RATIO = 0.1
+_COARSE_FRAME_DIVISOR = 2
 _KMEANS_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
 
 
@@ -43,59 +45,51 @@ def canonicalize_shades(gray: np.ndarray, k: int = 4, min_separation: float = MI
 
 
 def find_best_match(frame_gray: np.ndarray, template: np.ndarray, scales: np.ndarray):
-    scales = np.asarray(scales)
-    n = len(scales)
-    if n == 0:
-        return -1.0, None
-
     th, tw = template.shape[:2]
     fh, fw = frame_gray.shape[:2]
 
-    def score_at(idx):
-        scale = scales[idx]
-        w = int(tw * scale)
-        h = int(th * scale)
+    min_height = max(8, int(np.ceil(fh * _MIN_FRAME_HEIGHT_RATIO)))
+    max_height = min(fh, int(fw * th / tw))
+    if min_height > max_height:
+        return -1.0, None
 
-        if w < 8 or h < 8 or w > fw or h > fh:
-            return None
+    coarse_frame = cv2.resize(frame_gray, (fw // _COARSE_FRAME_DIVISOR, fh // _COARSE_FRAME_DIVISOR))
+    coarse_heights = [
+        int(height)
+        for height in np.linspace(
+            min_height, max_height, min(_COARSE_SAMPLES, max_height - min_height + 1)
+        ).round()
+    ]
 
-        resized = cv2.resize(template, (w, h))
-        result = cv2.matchTemplate(frame_gray, resized, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        return max_val, (max_loc[0], max_loc[1], w, h)
+    def score_at(height, target_frame=frame_gray):
+        width = int(round(tw * height / th))
+        if width < 8 or height < 8 or width > target_frame.shape[1] or height > target_frame.shape[0]:
+            return None, None
+        resized = cv2.resize(template, (width, height))
+        result = cv2.matchTemplate(target_frame, resized, cv2.TM_CCOEFF_NORMED)
+        _, score, _, max_loc = cv2.minMaxLoc(result)
+        return score, (max_loc[0], max_loc[1], width, height)
 
-    step = max(1, n // _COARSE_SAMPLES)
-    coarse_indices = list(range(0, n, step))
-    if coarse_indices[-1] != n - 1:
-        coarse_indices.append(n - 1)
+    best_score = -1.0
+    best_height = None
 
-    best_val = -1.0
+    for height in coarse_heights:
+        score, _ = score_at(int(round(height / _COARSE_FRAME_DIVISOR)), coarse_frame)
+        if score is not None and score > best_score:
+            best_score, best_height = score, height
+
+    if best_height is None:
+        return -1.0, None
+
+    best_score = -1.0
     best_box = None
-    best_idx = None
+    coarse_step = (max_height - min_height) // _COARSE_SAMPLES
+    lo = max(min_height, best_height - coarse_step)
+    hi = min(max_height, best_height + coarse_step)
 
-    for idx in coarse_indices:
-        scored = score_at(idx)
-        if scored is None:
-            continue
-        val, box = scored
-        if val > best_val:
-            best_val, best_box, best_idx = val, box, idx
+    for height in range(lo, hi + 1):
+        score, box = score_at(height)
+        if score is not None and score > best_score:
+            best_score, best_box = score, box
 
-    if best_idx is None:
-        return best_val, best_box
-
-    coarse_set = set(coarse_indices)
-    lo = max(0, best_idx - step)
-    hi = min(n - 1, best_idx + step)
-
-    for idx in range(lo, hi + 1):
-        if idx in coarse_set:
-            continue
-        scored = score_at(idx)
-        if scored is None:
-            continue
-        val, box = scored
-        if val > best_val:
-            best_val, best_box = val, box
-
-    return best_val, best_box
+    return best_score, best_box

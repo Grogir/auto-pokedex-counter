@@ -3,12 +3,12 @@ import time
 import cv2
 import numpy as np
 
-from pokedex_counter.config import FRAME_SIZE
+from pokedex_counter.config import FRAME_SIZE_CALIBRATION
 from pokedex_counter.vision.template_matching import find_best_match
 
 DEFAULT_SCALES = np.linspace(0.1, 5.0, 500)
 DEFAULT_LOCK_THRESHOLD = 0.95
-DEFAULT_CONFIRM_DELAY = 0.2
+DEFAULT_CONFIRM_DELAY = 1.0
 DEFAULT_POSITION_TOLERANCE = 1
 DEFAULT_MIN_ROI_SIZE = (30, 30)
 
@@ -54,10 +54,15 @@ class CalibrationService:
         candidates: dict[str, tuple[float, tuple[int, int, int, int]]] = {}
 
         cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE_CALIBRATION[0])
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE_CALIBRATION[1])
         if not cap.isOpened():
             raise RuntimeError(f"Could not open camera index {self.camera_index}")
 
         start = time.time()
+        frame_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        frame_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        print(f"[Calibration] Opened VideoCapture in {int(frame_width)}x{int(frame_height)}")
         print(f"[Calibration] Waiting for: {', '.join(pending)}")
         print(f"[Calibration] Minimum ROI size: {self.min_roi_size[0]}x{self.min_roi_size[1]}")
         print("ESC or the window close button to abort.\n")
@@ -72,8 +77,7 @@ class CalibrationService:
                 if not ret:
                     continue
 
-                frame = cv2.flip(frame, 1)
-                frame = cv2.resize(frame, FRAME_SIZE)
+                # frame = cv2.flip(frame, 1)
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                 display = frame.copy()
@@ -102,7 +106,7 @@ class CalibrationService:
                         elif _boxes_close(best_box, streak[1], self.position_tolerance):
                             first_hit_time, _ = streak
                             if now - first_hit_time >= self.confirm_delay:
-                                locked[name] = best_box
+                                locked[name] = (best_box[0] / frame_width, best_box[1] / frame_height, best_box[2] / frame_width, best_box[3] / frame_height)
                                 newly_locked.append(name)
                                 print(f"[Calibration] Locked {name} = {best_box}  "
                                       f"(score={best_val:.3f}, held for "
@@ -123,7 +127,7 @@ class CalibrationService:
                     candidates.pop(name, None)
 
                 window_name = "Calibration"
-                cv2.imshow(window_name, display)
+                cv2.imshow(window_name, cv2.resize(display, (1280, 720)))
                 key = cv2.waitKey(1) & 0xFF
                 if key == 27 or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
                     print("[Calibration] Aborted by user.")

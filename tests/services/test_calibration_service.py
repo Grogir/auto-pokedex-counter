@@ -6,9 +6,10 @@ from pokedex_counter.services.calibration_service import (
     DEFAULT_SCALES,
     _meets_min_size,
 )
+from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import find_best_match
 
-from .conftest import CALIBRATION_FILENAMES, FIXTURE_FILENAMES, FIXTURES_DIR, load_gray
+from .conftest import CALIBRATION_FILENAMES, FIXTURE_FILENAMES, FIXTURES_DIR
 
 CASES = [
     (fixture_name, label)

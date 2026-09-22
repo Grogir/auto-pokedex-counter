@@ -5,9 +5,10 @@ import numpy as np
 import pytest
 
 from pokedex_counter.config import FRAME_SIZE, SPRITES_BG_DIR, THRESHOLD
-from pokedex_counter.roi_config import build_detection_entries
+from pokedex_counter.roi_config import SECTION_TRIGGERS, build_detection_entries
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.template_service import TemplateService
+from pokedex_counter.vision.image_io import load_color, load_gray
 
 DETECTION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "detection"
 
@@ -33,6 +34,12 @@ DETECTION_CASES = [
     ("calibration_01.png", "text", "text_01_inverted.png", "35", 9),
 ]
 
+TEXTBOX_CASES = [
+    ("calibration_03.png", "textbox_catch_03.png", "105"),
+    ("calibration_03.png", "textbox_evolve_03.png", "55"),
+    ("calibration_03.png", "textbox_name_03.png", "133"),
+]
+
 
 @pytest.fixture(scope="module")
 def sprite_templates():
@@ -45,6 +52,18 @@ def _roi_templates_for(calibration_fixture, sprite_templates, calibrated_rois):
     return build_detection_entries(sprite_templates, locked)
 
 
+def _make_detector(roi_templates):
+    detector = DetectionService(roi_templates)
+    detector.set_section_provider(
+        lambda: next(
+            (section for section, trigger in enumerate(SECTION_TRIGGERS[:-1])
+             if trigger not in detector._detected),
+            len(SECTION_TRIGGERS) - 1,
+        )
+    )
+    return detector
+
+
 def _prime_to_section(detector, section_index):
     """Simulate the run having already progressed to `section_index`, by
     marking every earlier section's trigger as already detected.
@@ -52,7 +71,10 @@ def _prime_to_section(detector, section_index):
     (see roi_config.py's CATCH_SECTIONS/SECTION_TRIGGERS), so a cold
     detector can't see a later section's Pokemon in isolation the way
     these fixtures test them."""
-    detector._detected.update(t for t in detector._section_triggers[:section_index] if t is not None)
+    detector._detected.update(
+        trigger for trigger in SECTION_TRIGGERS[:section_index]
+        if trigger is not None
+    )
 
 
 @pytest.mark.parametrize(
@@ -63,12 +85,12 @@ def test_calibrated_roi_detects_expected_pokemon(
 ):
     roi_templates = _roi_templates_for(calibration_fixture, sprite_templates, calibrated_rois)
 
-    detector = DetectionService(roi_templates)
+    detector = _make_detector(roi_templates)
     _prime_to_section(detector, expected_section)
     detections = []
     detector.detection.connect(detections.append)
 
-    frame = cv2.imdecode(np.fromfile(str(DETECTION_FIXTURES_DIR / detection_fixture), dtype=np.uint8), cv2.IMREAD_COLOR)
+    frame = load_color(DETECTION_FIXTURES_DIR / detection_fixture)
     assert frame is not None, f"Could not load image: {detection_fixture}"
     detector.process_frame(cv2.flip(frame, 1))
 
@@ -78,15 +100,39 @@ def test_calibrated_roi_detects_expected_pokemon(
     )
 
 
+@pytest.mark.parametrize("calibration_fixture, detection_fixture, expected_name", TEXTBOX_CASES)
+def test_textbox_frames_detect_expected_pokemon(calibration_fixture, detection_fixture, expected_name):
+    detector = _make_detector([])
+    detections = []
+    detector.detection.connect(detections.append)
+
+    frame = load_color(DETECTION_FIXTURES_DIR / detection_fixture)
+    assert frame is not None, f"Could not load image: {detection_fixture}"
+
+    CALIBRATION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "calibration"
+    from pokedex_counter.vision.template_matching import find_best_match
+    from pokedex_counter.config import RESOURCES_DIR
+    import pokedex_counter.services.detection_service
+    calibration = load_gray(CALIBRATION_FIXTURES_DIR / calibration_fixture)
+    template = load_gray(RESOURCES_DIR / "calibration" / "full5.png")
+    _, box = find_best_match(calibration, template, [])
+    cal_h, cal_w = calibration.shape[:2]
+    pokedex_counter.services.detection_service.ROI_FULL = (box[0] / cal_w, box[1] / cal_h, box[2] / cal_w, box[3] / cal_h)
+
+    detector.process_frame_textbox(frame)
+
+    assert detections == [expected_name]
+
+
 def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, calibrated_rois):
     roi_templates = _roi_templates_for("calibration_01.png", sprite_templates, calibrated_rois)
 
-    detector = DetectionService(roi_templates)
+    detector = _make_detector(roi_templates)
     _prime_to_section(detector, 1)  # "97" lives in section 1
     detections = []
     detector.detection.connect(detections.append)
 
-    frame = cv2.imdecode(np.fromfile(str(DETECTION_FIXTURES_DIR / "catch_01.png"), dtype=np.uint8), cv2.IMREAD_COLOR)
+    frame = load_color(DETECTION_FIXTURES_DIR / "catch_01.png")
     flipped = cv2.flip(frame, 1)
 
     # Same screen held across many frames (e.g. player hasn't pressed a
@@ -126,8 +172,8 @@ def test_entries_outside_active_section_are_excluded_until_trigger_fires():
     name_a, name_b = "A", "B"
     roi_templates = [(name_a, roi, _pattern(1), 0), (name_b, roi, _pattern(2), 1)]
 
-    detector = DetectionService(roi_templates)
-    detector._section_triggers = [name_a, None]  # detecting "A" advances to section 1
+    detector = _make_detector(roi_templates)
+    detector.set_section_provider(lambda: 1 if name_a in detector._detected else 0)
     detections = []
     detector.detection.connect(detections.append)
 
@@ -152,8 +198,8 @@ def test_forgetting_the_trigger_rolls_back_the_active_section():
     name_a, name_b = "A", "B"
     roi_templates = [(name_a, roi, _pattern(1), 0), (name_b, roi, _pattern(2), 1)]
 
-    detector = DetectionService(roi_templates)
-    detector._section_triggers = [name_a, None]
+    detector = _make_detector(roi_templates)
+    detector.set_section_provider(lambda: 1 if name_a in detector._detected else 0)
     detections = []
     detector.detection.connect(detections.append)
 
@@ -175,7 +221,7 @@ def test_forgetting_the_trigger_rolls_back_the_active_section():
 
 def test_update_rois_rebuilds_groups_without_touching_detected():
     roi = (0, 0, 20, 20)
-    detector = DetectionService([("A", roi, _pattern(1), 0)])
+    detector = _make_detector([("A", roi, _pattern(1), 0)])
     detector._detected.add("A")
 
     new_roi = (0, 0, 25, 25)
@@ -189,7 +235,7 @@ def test_update_rois_rebuilds_groups_without_touching_detected():
 
 def test_update_rois_new_templates_are_matched_immediately():
     roi = (0, 0, 20, 20)
-    detector = DetectionService([("A", roi, _pattern(1), 0)])
+    detector = _make_detector([("A", roi, _pattern(1), 0)])
     detections = []
     detector.detection.connect(detections.append)
 
@@ -230,7 +276,7 @@ def test_negative_style_palette_still_detects_via_canonicalization():
     raw_score = cv2.minMaxLoc(cv2.matchTemplate(live_crop, template, cv2.TM_CCOEFF_NORMED))[1]
     assert raw_score < THRESHOLD
 
-    detector = DetectionService([(name, roi, template, 0)])
+    detector = _make_detector([(name, roi, template, 0)])
     detections = []
     detector.detection.connect(detections.append)
 
@@ -253,7 +299,7 @@ def test_low_contrast_palette_still_detects_via_canonicalization():
     raw_score = cv2.minMaxLoc(cv2.matchTemplate(live_crop, template, cv2.TM_CCOEFF_NORMED))[1]
     assert raw_score < THRESHOLD
 
-    detector = DetectionService([(name, roi, template, 0)])
+    detector = _make_detector([(name, roi, template, 0)])
     detections = []
     detector.detection.connect(detections.append)
 
@@ -270,7 +316,7 @@ def test_flat_crop_does_not_spuriously_match_via_canonicalization():
     template = _shade_pattern(_TEST_SHADE_GRID, (0, 85, 170, 255))
     flat_crop = np.full((20, 20), 128, dtype=np.uint8)
 
-    detector = DetectionService([("A", roi, template, 0)])
+    detector = _make_detector([("A", roi, template, 0)])
     detections = []
     detector.detection.connect(detections.append)
 

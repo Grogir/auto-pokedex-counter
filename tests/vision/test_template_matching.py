@@ -1,6 +1,8 @@
+import cv2
 import numpy as np
 
 from pokedex_counter.vision.template_matching import canonicalize_shades
+from pokedex_counter.vision.template_matching import find_best_match
 
 
 def _render(shade_grid, levels):
@@ -70,3 +72,17 @@ def test_degenerate_input_with_fewer_than_k_distinct_values_returns_none():
     img = _render(two_shade_grid, (0, 85, 170, 255))  # only 2 of the 4 levels actually appear
 
     assert canonicalize_shades(img) is None
+
+
+def test_find_best_match_refines_to_exact_pixel_height():
+    rng = np.random.RandomState(7)
+    template = rng.randint(0, 256, size=(20, 16), dtype=np.uint8)
+    target_height = 73
+    target_width = round(template.shape[1] * target_height / template.shape[0])
+    rendered = cv2.resize(template, (target_width, target_height), interpolation=cv2.INTER_LINEAR)
+    frame = rng.randint(0, 256, size=(200, 240), dtype=np.uint8)
+    frame[61:61 + target_height, 83:83 + target_width] = rendered
+
+    _, box = find_best_match(frame, template, np.array([0.1, 1.0]))
+
+    assert box == (83, 61, target_width, target_height)
