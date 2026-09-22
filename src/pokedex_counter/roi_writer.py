@@ -3,7 +3,7 @@ import os
 import re
 from pathlib import Path
 
-_CONST_NAMES = {"CATCH": "ROI_CATCH", "EVOLVE": "ROI_EVOLVE", "TEXT": "ROI_TEXT"}
+_CONST_NAMES = {"CATCH": "ROI_CATCH", "EVOLVE": "ROI_EVOLVE", "TEXT": "ROI_TEXT", "FULL": "ROI_FULL"}
 
 
 def update_roi_constants(config_path: Path, locked: dict[str, tuple[int, int, int, int]]) -> list[str]:

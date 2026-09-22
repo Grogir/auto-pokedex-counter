@@ -2,13 +2,14 @@ import sys
 from pathlib import Path
 
 import cv2
-import numpy
 
 from pokedex_counter.config import RESOURCES_DIR
 from pokedex_counter.roi_writer import update_roi_constants
 from pokedex_counter.services.calibration_service import CalibrationService
+from pokedex_counter.vision.image_io import load_color
 
-_FILENAMES = {"CATCH": "catch.png", "EVOLVE": "evolve.png", "TEXT": "text.png"}
+# _FILENAMES = {"CATCH": "catch.png", "EVOLVE": "evolve.png", "TEXT": "text.png"}
+_FILENAMES = {"FULL": "full5.png"}
 
 # None means "not calibrated yet" - roi_config.py skips any entry whose
 # type has no locked position, and app.py shows a calibration prompt
@@ -18,6 +19,7 @@ _FILENAMES = {"CATCH": "catch.png", "EVOLVE": "evolve.png", "TEXT": "text.png"}
 _SEED_TEMPLATE = """ROI_CATCH = None
 ROI_EVOLVE = None
 ROI_TEXT = None
+ROI_FULL = None
 """
 
 
@@ -50,7 +52,7 @@ def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
     templates = {}
     for name, filename in _FILENAMES.items():
         path = calibration_dir / filename
-        img = cv2.imdecode(numpy.fromfile(path, dtype=numpy.uint8), cv2.IMREAD_COLOR)
+        img = load_color(path)
         if img is None:
             print(f"[Calibration] ERROR: could not load reference image {path}, skipping {name}")
             continue

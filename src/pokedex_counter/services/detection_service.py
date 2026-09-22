@@ -1,24 +1,51 @@
 # vision/detector.py
+import time
+
 import cv2
 from PySide6.QtCore import QObject, Signal
 
-from pokedex_counter.config import FRAME_SIZE, ROI_SEARCH_MARGIN, THRESHOLD
-from pokedex_counter.roi_config import SECTION_TRIGGERS
+from pokedex_counter.config import FRAME_SIZE, FRAME_SIZE_CALIBRATION, ROI_SEARCH_MARGIN, THRESHOLD
+from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
 
+from pokedex_counter.config import RESOURCES_DIR
+POKEMON_NAMES = {
+	"BULBASAUR": "1", "IVYSAUR": "2", "VENUSAUR": "3", "CHARMANDER": "4", "CHARMELEON": "5", "CHARIZARD": "6", "SQUIRTLE": "7", "WARTORTLE": "8", "BLASTOISE": "9", "CATERPIE": "10", "METAPOD": "11", "BUTTERFREE": "12", "WEEDLE": "13", "KAKUNA": "14", "BEEDRILL": "15", "PIDGEY": "16", "PIDGEOTTO": "17", "PIDGEOT": "18", "RATTATA": "19", "RATICATE": "20", "SPEAROW": "21", "FEAROW": "22", "EKANS": "23", "ARBOK": "24", "PIKACHU": "25", "RAICHU": "26", "SANDSHREW": "27", "SANDSLASH": "28", "NIDORAN♀": "29", "NIDORINA": "30", "NIDOQUEEN": "31", "NIDORAN♂": "32", "NIDORINO": "33", "NIDOKING": "34", "CLEFAIRY": "35", "CLEFABLE": "36", "VULPIX": "37", "NINETALES": "38", "JIGGLYPUFF": "39", "WIGGLYTUFF": "40", "ZUBAT": "41", "GOLBAT": "42", "ODDISH": "43", "GLOOM": "44", "VILEPLUME": "45", "PARAS": "46", "PARASECT": "47", "VENONAT": "48", "VENOMOTH": "49", "DIGLETT": "50", "DUGTRIO": "51", "MEOWTH": "52", "PERSIAN": "53", "PSYDUCK": "54", "GOLDUCK": "55", "MANKEY": "56", "PRIMEAPE": "57", "GROWLITHE": "58", "ARCANINE": "59", "POLIWAG": "60", "POLIWHIRL": "61", "POLIWRATH": "62", "ABRA": "63", "KADABRA": "64", "ALAKAZAM": "65", "MACHOP": "66", "MACHOKE": "67", "MACHAMP": "68", "BELLSPROUT": "69", "WEEPINBELL": "70", "VICTREEBEL": "71", "TENTACOOL": "72", "TENTACRUEL": "73", "GEODUDE": "74", "GRAVELER": "75", "GOLEM": "76", "PONYTA": "77", "RAPIDASH": "78", "SLOWPOKE": "79", "SLOWBRO": "80", "MAGNEMITE": "81", "MAGNETON": "82", "FARFETCH'D": "83", "DODUO": "84", "DODRIO": "85", "SEEL": "86", "DEWGONG": "87", "GRIMER": "88", "MUK": "89", "SHELLDER": "90", "CLOYSTER": "91", "GASTLY": "92", "HAUNTER": "93", "GENGAR": "94", "ONIX": "95", "DROWZEE": "96", "HYPNO": "97", "KRABBY": "98", "KINGLER": "99", "VOLTORB": "100", "ELECTRODE": "101", "EXEGGCUTE": "102", "EXEGGUTOR": "103", "CUBONE": "104", "MAROWAK": "105", "HITMONLEE": "106", "HITMONCHAN": "107", "LICKITUNG": "108", "KOFFING": "109", "WEEZING": "110", "RHYHORN": "111", "RHYDON": "112", "CHANSEY": "113", "TANGELA": "114", "KANGASKHAN": "115", "HORSEA": "116", "SEADRA": "117", "GOLDEEN": "118", "SEAKING": "119", "STARYU": "120", "STARMIE": "121", "MR.MIME": "122", "SCYTHER": "123", "JYNX": "124", "ELECTABUZZ": "125", "MAGMAR": "126", "PINSIR": "127", "TAUROS": "128", "MAGIKARP": "129", "GYARADOS": "130", "LAPRAS": "131", "DITTO": "132", "EEVEE": "133", "VAPOREON": "134", "JOLTEON": "135", "FLAREON": "136", "PORYGON": "137", "OMANYTE": "138", "OMASTAR": "139", "KABUTO": "140", "KABUTOPS": "141", "AERODACTYL": "142", "SNORLAX": "143", "ARTICUNO": "144", "ZAPDOS": "145", "MOLTRES": "146", "DRATINI": "147", "DRAGONAIR": "148", "DRAGONITE": "149", "MEWTWO": "150", "MEW": "151"
+}
+TEXTBOX_FILE_TOP = "top.png"
+TEXTBOX_FILE_BOTTOM = "bottom.png"
+CHARSET_FILE = "charset.png"
+CHARSET = [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+    "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "(", ")", ":", ";", "[", "]",
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+    "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "é","'d","'l","'s","'t","'v",
+    " ", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",
+    "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",
+    "'","PK","MN", "-","'r","'m", "?", "!", ".", "_", "_", "_", "_", "_", " ", "♂",
+    "₽", "×", ".", "/", ",", "♀", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+]
+
+try:
+    from pokedex_counter.roi_calibration import ROI_FULL
+except ImportError:
+    ROI_FULL = None
 
 class DetectionService(QObject):
     detection = Signal(str)
     debug_scores = Signal(str, float)
-    section_changed = Signal(int)
-
-    def __init__(self, roi_templates, threshold=THRESHOLD, debug=False):
+    def __init__(self, roi_templates, threshold=THRESHOLD, debug=False, section_provider=None):
         super().__init__()
         self.threshold = threshold
         self.debug = debug
         self._detected: set[str] = set()
-        self._section_triggers = SECTION_TRIGGERS
-        self._last_section = 0
+        self._last_detected = None
+        self._section_provider = section_provider
+
+        self._textbox_top = load_gray(RESOURCES_DIR / "textbox" / TEXTBOX_FILE_TOP)
+        self._textbox_bottom = load_gray(RESOURCES_DIR / "textbox" / TEXTBOX_FILE_BOTTOM)
+        self._text = ""
+        self._charset_templates = self.load_charset()
 
         # roi -> [(name, resized_template, canonical_template, section_index), ...],
         # grouped so each distinct screen region is cropped/converted only
@@ -47,30 +74,115 @@ class DetectionService(QObject):
         self._roi_groups = roi_groups
 
     def _active_section(self) -> int:
-        """The currently active section, derived live from `_detected` (not
-        tracked incrementally) so undoing a trigger detection via forget()
-        automatically rolls the active section back too - no separate
-        mutable pointer to keep in sync."""
-        last = len(self._section_triggers) - 1
-        section = 0
-        while section < last and self._section_triggers[section] in self._detected:
-            section += 1
-        return section
+        if self._section_provider is None:
+            raise RuntimeError("DetectionService requires a section provider")
+        return self._section_provider()
+
+    def set_section_provider(self, provider) -> None:
+        self._section_provider = provider
 
     def current_section(self) -> int:
         """Public accessor for the currently active section (see
         _active_section)."""
         return self._active_section()
 
+    def image_to_binary(self, image):
+        value = 0
+        for pixel in image.flat:
+            value = (value << 1) | (int(pixel) & 1)
+        return value
+
+    def load_charset(self):
+        charset_templates = {}
+        charset_img = load_gray(RESOURCES_DIR / "textbox" / CHARSET_FILE)
+        h = charset_img.shape[0] // 8
+        w = charset_img.shape[1] // 8
+        for idx in range(0, w * h):
+            if CHARSET[idx] != "_":
+                tile_x = (idx % w) * 8
+                tile_y = (idx // w) * 8
+                character = charset_img[tile_y:tile_y+8, tile_x:tile_x+8]
+                binary = self.image_to_binary(character)
+                # cv2.imwrite("test.png", character)
+                charset_templates[binary] = CHARSET[idx]
+        return charset_templates
+
+    def process_frame_textbox(self, frame):
+        if not ROI_FULL: return
+        # section = self._active_section()
+        # x, y, w, h = [n * FRAME_SIZE[1] // FRAME_SIZE_CALIBRATION[1] for n in ROI_FULL]
+        frame_h, frame_w = frame.shape[:2]
+        game_x = round(ROI_FULL[0] * frame_w)
+        game_y = round(ROI_FULL[1] * frame_h)
+        game_w = round(ROI_FULL[2] * frame_w)
+        game_h = round(ROI_FULL[3] * frame_h)
+
+        textbox = frame[game_y+round(game_h*2/3) : game_y+game_h, game_x : game_x+game_w]
+        # cv2.imwrite("textbox1.png", textbox)
+        textbox = cv2.resize(textbox, (160, 48))
+        # cv2.imwrite("textbox2.png", textbox)
+        textbox = cv2.cvtColor(textbox, cv2.COLOR_BGR2GRAY)
+        # cv2.imwrite("textbox3.png", textbox)
+        _, textbox = cv2.threshold(textbox, 128, 255, cv2.THRESH_BINARY)
+        # cv2.imwrite("textbox4.png", textbox)
+        log = ""
+
+        TEXTBOX_THRESHOLD = 20
+        score = cv2.countNonZero(cv2.absdiff(textbox[0:8, 0:160], self._textbox_top)) + cv2.countNonZero(cv2.absdiff(textbox[40:48, 0:160], self._textbox_bottom))
+        if score >= 160 * 16 - TEXTBOX_THRESHOLD: # inverted palette
+            textbox = 255 - textbox
+            score = 160 * 16 - score
+        if score > TEXTBOX_THRESHOLD:
+            return
+        if self.debug and score > 0:
+            log += f" textbox_score={score}"
+
+        def find_character(char):
+            binary = self.image_to_binary(char)
+            best = self._charset_templates.get(binary)
+            if best:
+                return best, 0
+            best_score = 64
+            for template, str in self._charset_templates.items():
+                score = (binary ^ template).bit_count()
+                if score < best_score:
+                    best, best_score = str, score
+            return best, best_score
+
+        line1, line2 = "", ""
+        for c in range(8, 152, 8):
+            best, score = find_character(textbox[16:24, c:c+8])
+            line1 += best
+            if self.debug and score != 0: log += f" [1,{c}]\"{best}\"={score}"
+        for c in range(8, 152, 8):
+            best, score = find_character(textbox[32:40, c:c+8])
+            line2 += best
+            if self.debug and score != 0: log += f" [2,{c}]\"{best}\"={score}"
+        text = (line1.rstrip() + " " + line2).rstrip()
+        if text != "" and text != self._text:
+            print(f'"{text}"{log}')
+            self._text = text
+
+            if text.endswith(" was caught!"):
+                mon = text[:-12]
+            elif text.startswith("give a nickname to ") and text[-1] == "?":
+                mon = text[19:-1]
+            elif " evolved into " in text and text[-1] == "!":
+                mon = text.split(" evolved into ")[1][:-1]
+            else:
+                return
+
+            if (id := POKEMON_NAMES.get(mon)) and id != self._last_detected:
+                self._detected.add(id)
+                self.detection.emit(id)
+                self._last_detected = id
+                print(f"Detected {id} ({mon})")
+
     def process_frame(self, frame):
         frame = cv2.flip(frame, 1)
-        frame = cv2.resize(frame, FRAME_SIZE)
+        # frame = cv2.resize(frame, FRAME_SIZE)
 
         section = self._active_section()
-
-        if section != self._last_section:
-            self._last_section = section
-            self.section_changed.emit(section)
 
         if self.debug:
             print(f"[section] active={section}")
@@ -83,6 +195,7 @@ class DetectionService(QObject):
                 (name, template, canonical)
                 for name, template, canonical, section_index in entries
                 if section_index == section and name not in self._detected
+                # if name not in self._detected
             ]
             if not active:
                 continue
@@ -126,5 +239,13 @@ class DetectionService(QObject):
             self.detection.emit(best_name)
             print(f"Detected {best_name}: {best_value}")
 
+    def select(self, name: str) -> None:
+        self._detected.add(name)
+
     def forget(self, name: str) -> None:
         self._detected.discard(name)
+        self._last_detected = None
+
+    def reset(self) -> None:
+        self._detected.clear()
+        self._last_detected = None

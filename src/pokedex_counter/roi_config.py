@@ -13,6 +13,10 @@ try:
     from pokedex_counter.roi_calibration import ROI_CATCH, ROI_EVOLVE, ROI_TEXT
 except ImportError:
     ROI_CATCH = ROI_EVOLVE = ROI_TEXT = None
+try:
+    from pokedex_counter.roi_calibration import ROI_FULL
+except ImportError:
+    ROI_FULL = None
 
 # Dex numbers whose "obtained" event is only ever confirmed via a name-text
 # banner (trade evolutions etc.) rather than a sprite match against
@@ -70,8 +74,8 @@ CATCH_SECTIONS_RAW: list[list[str]] = [
     ["25", "81", "26", "100", "145", "83", "106", "7"],
     ["33", "35", "63", "127", "137", "147", "69", "56", "2", "131", "13"],
     ["138", "142", "133", "124", "132", "52", "77", "88", "89", "110", "125",
-     "60", "79", "108", "93", "24", "64", "34", "36", "148"],
-    ["93", "24", "64", "34", "36"],  # dedicated evolution section - these
+     "60", "79", "108", "93", "24", "64", "34", "36", "47", "148"],
+    ["93", "24", "64", "34", "36", "47"],  # dedicated evolution section - these
     # five repeat from the section above (still catchable there too); the
     # rest is filled in by build_catch_sections()'s sweep
 ]
@@ -80,8 +84,8 @@ CATCH_SECTIONS_RAW: list[list[str]] = [
 # rather than the default CATCH/TEXT one.
 SECTION_EVOLVE_OVERRIDES: dict[int, set[str]] = {
     7: {"30", "31", "47", "103"},  # section 8 (0-indexed 7)
-    10: {"148", "93", "24", "64", "34", "36"},  # section 11 (0-indexed 10)
-    11: {"93", "24", "64", "34", "36"},  # dedicated evolution section - same five, listed again here
+    10: {"148", "93", "24", "64", "34", "36", "47"},  # section 11 (0-indexed 10)
+    11: {"93", "24", "64", "34", "36", "47"},  # dedicated evolution section - same five, listed again here
 }
 
 # The dex number whose detection advances to the next section. The final
@@ -167,3 +171,6 @@ def build_detection_entries(templates: dict, locked: dict[str, tuple[int, int, i
         for name, roi_label in section
         if effective[roi_label] is not None
     ]
+
+def is_calibrated() -> bool:
+    return ROI_FULL is not None
