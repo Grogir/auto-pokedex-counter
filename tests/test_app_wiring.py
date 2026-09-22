@@ -10,8 +10,13 @@ evolution.
 """
 
 import pytest
+from PySide6.QtCore import Qt
 
-from pokedex_counter.app import wire_bonus_highlight, wire_found_pokemon
+from pokedex_counter.app import (
+    wire_bonus_highlight,
+    wire_found_pokemon,
+)
+from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import SPRITES_DIR
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.roi_config import CATCH_SECTIONS
@@ -80,9 +85,11 @@ BOTH_WAYS = "20"
 def found_wiring(qtbot):
     controller = GameController()
     strip = SpriteStrip(SPRITES_DIR)
+    boxes = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(strip)
-    wire_found_pokemon(controller, strip)
-    return controller, strip
+    qtbot.addWidget(boxes)
+    wire_found_pokemon(controller, strip, boxes)
+    return controller, strip, boxes
 
 
 def _sections_for(name: str) -> tuple[int, int]:
@@ -94,7 +101,7 @@ def _sections_for(name: str) -> tuple[int, int]:
 
 
 def test_a_wild_catch_reaches_the_strip_as_a_catch(found_wiring):
-    controller, strip = found_wiring
+    controller, strip, _ = found_wiring
     caught_in, _ = _sections_for(BOTH_WAYS)
 
     controller.on_section_changed(caught_in)
@@ -107,7 +114,7 @@ def test_a_wild_catch_reaches_the_strip_as_a_catch(found_wiring):
 def test_the_same_pokemon_reaches_the_strip_as_an_evolution_elsewhere(found_wiring):
     """Same dex number, different section - only the section it was found in
     says which of the two happened."""
-    controller, strip = found_wiring
+    controller, strip, _ = found_wiring
     _, evolved_in = _sections_for(BOTH_WAYS)
 
     controller.on_section_changed(evolved_in)
@@ -115,3 +122,46 @@ def test_the_same_pokemon_reaches_the_strip_as_an_evolution_elsewhere(found_wiri
 
     assert strip._labels_by_name[BOTH_WAYS]._selected
     assert BOTH_WAYS in strip._evolved_names
+
+
+@pytest.mark.parametrize(
+    "section_kind, expected_color",
+    [("caught", "red"), ("evolved", "black")],
+)
+def test_manual_bonus_click_color_follows_the_active_section(
+    found_wiring, section_kind, expected_color, qtbot
+):
+    controller, strip, boxes = found_wiring
+    name = "47"
+    caught_in, evolved_in = _sections_for(name)
+    section = caught_in if section_kind == "caught" else evolved_in
+
+    strip.set_bonus_names({name})
+    wire_found_pokemon(controller, strip, boxes)
+    strip.sprite_selected.connect(controller.on_detection)
+    controller.on_section_changed(section)
+
+    strip._labels_by_name[name].show()
+    qtbot.mouseClick(strip._labels_by_name[name], Qt.MouseButton.LeftButton)
+
+    assert f"background-color: {expected_color};" in (
+        strip._labels_by_name[name].styleSheet()
+    )
+
+
+def test_manual_sprite_click_reaches_boxes_but_unclick_does_not(qtbot):
+    strip = SpriteStrip(SPRITES_DIR)
+    boxes = BoxesWindow(SPRITES_DIR)
+    controller = GameController()
+    qtbot.addWidget(strip)
+    qtbot.addWidget(boxes)
+    wire_found_pokemon(controller, strip, boxes)
+    strip.sprite_selected.connect(controller.on_detection)
+    label = strip._labels_by_name["1"]
+
+    label.show()
+    qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
+
+    assert boxes.team == []
+    assert boxes.boxes[1] == []

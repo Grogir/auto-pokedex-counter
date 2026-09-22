@@ -41,7 +41,6 @@ class ClickableLabel(QLabel):
         self._selected = True
         self._catch_color = color
         self._apply_style()
-        self.clicked.emit(self._path)
 
     def deselect(self) -> None:
         """Programmatically deselect (idempotent - no-op if not selected)."""
@@ -50,7 +49,6 @@ class ClickableLabel(QLabel):
         self._selected = False
         self._catch_color = "black"
         self._apply_style()
-        self.clicked.emit(self._path)
 
     def set_wr_marked(self, marked: bool) -> None:
         """Toggle the pre-catch "on WR route" highlight. Purely visual -

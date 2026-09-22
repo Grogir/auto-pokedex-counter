@@ -39,8 +39,14 @@ def test_update_counter_is_ignored_while_uncalibrated(main_window):
 
 
 def test_set_calibrated_true_restores_the_current_count(main_window):
+    from pokedex_counter.controllers.game_controller import GameController
+
+    controller = GameController()
+    controller.count_changed.connect(main_window._update_counter)
+    main_window.set_count_provider(controller.current_count)
     main_window.set_calibrated(False)
-    main_window.sprite_strip._count = 3  # simulate catches made before calibrating
+    for name in ("1", "2", "3"):
+        controller.on_detection(name)
 
     main_window.set_calibrated(True)
 

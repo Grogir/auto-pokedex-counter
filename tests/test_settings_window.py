@@ -36,3 +36,10 @@ def test_the_two_highlight_settings_are_independent(settings):
     settings.highlight_bonuses_checkbox.setChecked(True)
 
     assert not settings.compare_to_wr_checkbox.isChecked()
+
+
+def test_sprite_dimensions_are_separate_and_start_equal(settings):
+    assert settings.sprite_width_spinbox.value() == 24
+    assert settings.sprite_height_spinbox.value() == 24
+    assert label_for(settings, settings.sprite_width_spinbox) == "Sprite width:"
+    assert label_for(settings, settings.sprite_height_spinbox) == "Sprite height:"

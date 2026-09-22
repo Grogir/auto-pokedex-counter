@@ -16,6 +16,7 @@ isn't currently showing.
 import re
 
 import pytest
+from PySide6.QtCore import Qt
 
 from pokedex_counter.config import SPRITES_DIR
 from pokedex_counter.ui.widgets import sprite_strip as sprite_strip_module
@@ -40,24 +41,41 @@ def test_reset_deselects_everything_and_zeroes_the_count(sprite_strip):
     some_names = list(sprite_strip._labels_by_name)[:3]
     for name in some_names:
         sprite_strip.select_sprite(name)
-    assert sprite_strip._count == 3
 
     deselected = []
     sprite_strip.sprite_deselected.connect(deselected.append)
-    counts = []
-    sprite_strip.count_changed.connect(counts.append)
 
     sprite_strip.reset()
 
-    assert sprite_strip._count == 0
-    assert set(deselected) == set(some_names)
-    assert counts[-1] == 0
     assert all(not label._selected for label in sprite_strip._labels_by_name.values())
+    assert not deselected
 
 
 def test_reset_on_already_empty_strip_is_a_noop(sprite_strip):
     sprite_strip.reset()
-    assert sprite_strip._count == 0
+
+
+def test_rectangular_dimensions_resize_sprite_labels(sprite_strip):
+    label = sprite_strip._labels_by_name["1"]
+
+    sprite_strip.set_sprite_dimensions(40, 30)
+
+    assert label.size().width() == 40
+    assert label.size().height() == 30
+    assert label.pixmap().size().width() == 40
+    assert label.pixmap().size().height() == 30
+
+
+def test_padding_expands_sprite_labels_without_changing_icon_canvas(sprite_strip):
+    label = sprite_strip._labels_by_name["1"]
+    sprite_strip.set_sprite_dimensions(40, 30)
+
+    sprite_strip.set_sprite_padding(5)
+
+    assert label.size().width() == 50
+    assert label.size().height() == 40
+    assert label.pixmap().size().width() == 40
+    assert label.pixmap().size().height() == 30
 
 
 def test_reload_reuses_cached_pixmaps(qtbot, monkeypatch):
@@ -247,7 +265,7 @@ def test_reset_forgets_that_a_bonus_was_evolved(sprite_strip):
 
 # --- hand-clicked catches ---
 
-def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip):
+def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip, qtbot):
     """A ClickableLabel can only paint itself black on click - it knows
     nothing about WR or bonus state - so the strip fixes the color up
     afterwards. Without that, hand-marking a catch the detector missed
@@ -256,20 +274,21 @@ def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip):
     sprite_strip.mark_wr_section({"1"})
 
     for name in ("1", "4", "7"):
-        sprite_strip._labels_by_name[name].toggle_selected()
+        label = sprite_strip._labels_by_name[name]
+        label.show()
+        qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
     assert color_of(sprite_strip, "4") == "red"    # bonus
     assert color_of(sprite_strip, "1") == "black"  # on route
     assert color_of(sprite_strip, "7") == "green"  # off route
-    assert sprite_strip._count == 3
 
 
-def test_manual_unclick_clears_the_highlight_and_the_count(sprite_strip):
+def test_manual_unclick_clears_the_highlight_and_the_count(sprite_strip, qtbot):
     sprite_strip.set_bonus_names({"4"})
     label = sprite_strip._labels_by_name["4"]
 
-    label.toggle_selected()
-    label.toggle_selected()
+    label.show()
+    qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
     assert color_of(sprite_strip, "4") is None
-    assert sprite_strip._count == 0

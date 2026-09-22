@@ -29,13 +29,11 @@ def test_deselect_is_a_noop_when_not_selected(label, qtbot):
     assert not label._selected
 
 
-def test_deselect_emits_clicked_with_the_path(label, qtbot):
+def test_deselect_does_not_emit_clicked(label, qtbot):
     label.select()
 
-    with qtbot.waitSignal(label.clicked, timeout=100) as blocker:
+    with qtbot.assertNotEmitted(label.clicked):
         label.deselect()
-
-    assert blocker.args == [Path("42.png")]
 
 
 def test_wr_mark_shows_blue_while_uncaught(label):

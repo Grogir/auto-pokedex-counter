@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.resize(300, 600)
         self._calibrated = True
         self._counter_font_size = DEFAULT_COUNTER_FONT_SIZE
+        self._count_provider = None
 
         self._build_ui()
 
@@ -40,6 +41,7 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         self._central_widget = QWidget()
+        self.setStyleSheet("QMainWindow { background-color: #FFFFFF; }")
         layout = QGridLayout(self._central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -48,7 +50,6 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self.sprite_strip)
 
-        self.sprite_strip.count_changed.connect(self._update_counter)
         self.counter_label = QLabel("0")
         self.counter_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.counter_label.setContentsMargins(1, 1, 1, 1)
@@ -62,8 +63,9 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self._central_widget)
 
-    def bind_controller(self, controller):
-        controller.count_changed.connect(self._update_counter)
+    def set_count_provider(self, count_provider):
+        self._count_provider = count_provider
+        self._update_counter(count_provider())
 
     def _apply_counter_font(self, points: int) -> None:
         font = QFont(self._counter_font_family)
@@ -89,7 +91,7 @@ class MainWindow(QMainWindow):
         self.counter_label.setWordWrap(not calibrated)
         if calibrated:
             self._apply_counter_font(self._counter_font_size)
-            self._update_counter(self.sprite_strip._count)
+            self._update_counter(self._count_provider() if self._count_provider is not None else 0)
         else:
             self._apply_counter_font(CALIBRATION_MESSAGE_FONT_SIZE)
             self.counter_label.setText(CALIBRATION_NEEDED_MESSAGE)
@@ -107,7 +109,10 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self._sync_height_to_width)
 
     def set_sprite_size(self, size: int) -> None:
-        self.sprite_strip.set_sprite_size(size)
+        self.set_sprite_dimensions(size, size)
+
+    def set_sprite_dimensions(self, width: int, height: int) -> None:
+        self.sprite_strip.set_sprite_dimensions(width, height)
         self.refresh_size()
 
     def set_sprite_padding(self, size: int) -> None:

@@ -18,15 +18,15 @@ from pokedex_counter.ui.widgets.flow_layout import FlowLayout
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
 class SpriteStrip(QWidget):
-    sprite_clicked = Signal(Path)
+    sprite_selected = Signal(Path)
     sprite_deselected = Signal(str)
-    count_changed = Signal(int)
 
     def __init__(self, folder: Path, sprite_size: int = 24, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._folder = Path(folder)
         self._sprite_size = sprite_size
-        self._count = 0
+        self._sprite_width = sprite_size
+        self._sprite_height = sprite_size
         self._labels_by_name: dict[str, ClickableLabel] = {}
         self._pixmap_cache: dict[Path, QPixmap] = {}
         self._wr_enabled = False
@@ -50,8 +50,6 @@ class SpriteStrip(QWidget):
                 widget.deleteLater()
 
         self._labels_by_name.clear()
-        self._count = 0
-
         paths = self._discover_images()
 
         if not paths:
@@ -88,8 +86,7 @@ class SpriteStrip(QWidget):
 
         self.draw_image_in_label(label)
 
-        # IMPORTANT: connect via handler, not direct emit
-        label.clicked.connect(self._on_sprite_clicked)
+        label.clicked.connect(self._on_manual_click)
 
         return label
 
@@ -103,34 +100,41 @@ class SpriteStrip(QWidget):
             return label
 
         # Resize down if needed
-        size = self._sprite_size
-        if pixmap.width() > size or pixmap.height() > size:
+        width = self._sprite_width
+        height = self._sprite_height
+        if pixmap.width() > width or pixmap.height() > height:
             pixmap = pixmap.scaled(
-                size,
-                size,
+            width,
+            height,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
         # Create transparent image
-        canvas = QPixmap(size, size)
+        canvas = QPixmap(width, height)
         canvas.fill(Qt.GlobalColor.transparent)
         # Draw the centered pokémon inside
-        x = (size - pixmap.width()) // 2
-        y = (size - pixmap.height()) // 2
+        x = (width - pixmap.width()) // 2
+        y = (height - pixmap.height()) // 2
         painter = QPainter(canvas)
         painter.drawPixmap(x, y, pixmap)
         painter.end()
 
+        label.setFixedSize(width + 2 * label._padding, height + 2 * label._padding)
         label.setPixmap(canvas)
 
     def set_sprite_size(self, size) -> None:
-        self._sprite_size = size
+        self.set_sprite_dimensions(size, size)
+
+    def set_sprite_dimensions(self, width: int, height: int) -> None:
+        self._sprite_width = width
+        self._sprite_height = height
         for label in self._labels_by_name.values():
             self.draw_image_in_label(label)
 
     def set_sprite_padding(self, padding) -> None:
         for label in self._labels_by_name.values():
             label.set_padding(padding)
+            self.draw_image_in_label(label)
 
     def _catch_color_for(self, name: str) -> str:
         """The background a catch of `name` should get. Bonus highlighting
@@ -162,6 +166,7 @@ class SpriteStrip(QWidget):
             self._evolved_names.discard(name)
 
         label.select(self._catch_color_for(name))
+        label.set_catch_color(self._catch_color_for(name))
         return True
 
     def deselect_sprite(self, name: str) -> bool:
@@ -222,9 +227,6 @@ class SpriteStrip(QWidget):
         if self._wr_enabled:
             self.clear_wr_marks()
 
-    def caught_count(self) -> int:
-        return self._count
-
     def set_columns(self, columns: int) -> None:
         self._layout.set_columns(columns)
 
@@ -237,23 +239,13 @@ class SpriteStrip(QWidget):
     def minimumSizeHint(self):
         return self._layout.minimumSize()
 
-    def _on_sprite_clicked(self, path: Path) -> None:
+    def _on_manual_click(self, path: Path) -> None:
         label = self.sender()
 
         if isinstance(label, ClickableLabel):
             if label._selected:
-                self._count += 1
-                # A hand-clicked catch comes back black - the label itself
-                # knows nothing about WR/bonus state - so fix its color up
-                # here, giving manual marks the same colors detected ones get.
                 label.set_catch_color(self._catch_color_for(path.stem))
+                self.sprite_selected.emit(path.stem)
             else:
-                self._count -= 1
-                # Covers the programmatic path too - deselect_sprite() lands
-                # here via the label's `clicked` - so forgetting a sprite
-                # forgets how it was obtained, and re-marking it starts over.
                 self._evolved_names.discard(path.stem)
-                self.sprite_deselected.emit(path.stem)   # NEW
-
-            self.count_changed.emit(self._count)
-            self.sprite_clicked.emit(path)
+                self.sprite_deselected.emit(path.stem)
