@@ -1,6 +1,6 @@
 from pathlib import Path
-import cv2
-import numpy
+
+from pokedex_counter.vision.image_io import load_gray
 
 class TemplateService:
     def __init__(self, folder: Path):
@@ -10,7 +10,7 @@ class TemplateService:
             if p.suffix.lower() not in {".png", ".jpg"}:
                 continue
 
-            img = cv2.imdecode(numpy.fromfile(p, dtype=numpy.uint8), cv2.IMREAD_GRAYSCALE)
+            img = load_gray(p)
 
             if img is None:
                 print(f"[TemplateService] WARNING: failed to load '{p.name}', skipping")
