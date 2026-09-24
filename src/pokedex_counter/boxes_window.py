@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
-from pokedex_counter.config import SPRITES_DIR
+from pokedex_counter.config import LABEL_COLOR_BOX_COUNT, SPRITES_DIR
 
 TEAM_SIZE = 6
 BOX_SIZE = 20
@@ -199,7 +199,7 @@ class BoxesWindow(QWidget):
         title_layout.addWidget(title_label)
         count_label = QLabel()
         count_label.setFixedWidth(48)
-        count_label.setStyleSheet("color: gray;")
+        count_label.setStyleSheet(f"color: {LABEL_COLOR_BOX_COUNT};")
         title_layout.addWidget(count_label)
         row.addWidget(title_panel)
         self._count_labels.append(count_label)

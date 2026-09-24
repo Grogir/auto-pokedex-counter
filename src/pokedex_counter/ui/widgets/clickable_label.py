@@ -7,6 +7,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pokedex_counter.config import (
+    LABEL_COLOR_CATCH,
+    LABEL_COLOR_IGNORED,
+    LABEL_COLOR_REQUIRED,
+    LABEL_COLOR_WR_MARKED,
+)
+
+
 class ClickableLabel(QLabel):
     clicked = Signal(Path)
     ignore_toggled = Signal(Path, bool)
@@ -20,7 +28,7 @@ class ClickableLabel(QLabel):
         self._section_color = None
         self._ignored = False
         self._just_unignored = False
-        self._catch_color = "black"
+        self._catch_color = LABEL_COLOR_CATCH
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -39,12 +47,12 @@ class ClickableLabel(QLabel):
             self._ignored = False
         self._selected = not self._selected
         if self._selected:
-            self._catch_color = "black"
+            self._catch_color = LABEL_COLOR_CATCH
             self._just_unignored = was_ignored
         self._apply_style()
         self.clicked.emit(self._path)
 
-    def select(self, color: str = "black") -> None:
+    def select(self, color: str = LABEL_COLOR_CATCH) -> None:
         """Programmatically select (idempotent - no-op if already selected)."""
         if self._selected:
             return
@@ -70,7 +78,7 @@ class ClickableLabel(QLabel):
         if not self._selected:
             return
         self._selected = False
-        self._catch_color = "black"
+        self._catch_color = LABEL_COLOR_CATCH
         self._apply_style()
 
     def set_wr_marked(self, marked: bool) -> None:
@@ -105,11 +113,19 @@ class ClickableLabel(QLabel):
     def _apply_style(self) -> None:
         base_style = f"padding: {self._padding}px;"
         if self._ignored:
-            self.setStyleSheet(base_style + "background-color: gray;")
+            self.setStyleSheet(
+                base_style + f"background-color: {LABEL_COLOR_IGNORED};"
+            )
         elif self._selected:
             self.setStyleSheet(base_style + f"background-color: {self._catch_color};")
+        elif self._section_color == LABEL_COLOR_REQUIRED:
+            self.setStyleSheet(
+                base_style + f"background-color: {self._section_color};"
+            )
         elif self._wr_marked:
-            self.setStyleSheet(base_style + "background-color: blue;")
+            self.setStyleSheet(
+                base_style + f"background-color: {LABEL_COLOR_WR_MARKED};"
+            )
         elif self._section_color:
             self.setStyleSheet(base_style + f"background-color: {self._section_color};")
         else:

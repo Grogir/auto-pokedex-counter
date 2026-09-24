@@ -12,6 +12,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pokedex_counter.config import (
+    LABEL_COLOR_BONUS,
+    LABEL_COLOR_CATCH,
+    LABEL_COLOR_OFF_ROUTE,
+    LABEL_COLOR_BOX_COUNT,
+    LABEL_COLOR_REQUIRED,
+    LABEL_COLOR_SECTION_BONUS,
+)
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 from pokedex_counter.ui.widgets.flow_layout import FlowLayout
 
@@ -57,7 +65,9 @@ class SpriteStrip(QWidget):
 
         if not paths:
             placeholder = QLabel(f"No images found in {self._folder}")
-            placeholder.setStyleSheet("color: gray; font-style: italic;")
+            placeholder.setStyleSheet(
+                f"color: {LABEL_COLOR_BOX_COUNT}; font-style: italic;"
+            )
             self._layout.addWidget(placeholder)
             return
 
@@ -147,10 +157,10 @@ class SpriteStrip(QWidget):
         evolving into a bonus pokemon is the ordinary way to get it, so it
         gets the normal colors."""
         if name in self._bonus_names and name not in self._evolved_names:
-            return "red"
+            return LABEL_COLOR_BONUS
         if self._wr_enabled and name not in self._wr_names:
-            return "green"
-        return "black"
+            return LABEL_COLOR_OFF_ROUTE
+        return LABEL_COLOR_CATCH
 
     def set_current_section(self, required: set[str], bonuses: set[str]) -> None:
         self._section_names = set(required)
@@ -158,9 +168,9 @@ class SpriteStrip(QWidget):
         for name, label in self._labels_by_name.items():
             label.set_wr_marked(False)
             if name in self._section_names:
-                label.set_section_color("dodgerblue")
+                label.set_section_color(LABEL_COLOR_REQUIRED)
             elif name in self._section_bonus_names:
-                label.set_section_color("lightpink")
+                label.set_section_color(LABEL_COLOR_SECTION_BONUS)
             else:
                 label.set_section_color(None)
 
@@ -214,6 +224,15 @@ class SpriteStrip(QWidget):
             if label._selected:
                 label.set_catch_color(self._catch_color_for(name))
 
+    def set_wr_names(self, names: set[str]) -> None:
+        """Replace the WR names known up to the active section."""
+        self._wr_enabled = True
+        self._wr_names = set(names)
+        for name, label in self._labels_by_name.items():
+            label.set_wr_marked(name in self._wr_names)
+            if label._selected:
+                label.set_catch_color(self._catch_color_for(name))
+
     def clear_wr_marks(self) -> None:
         """Turn off WR comparison: no more blue highlighting, and catches go
         back to the default black."""
@@ -263,7 +282,7 @@ class SpriteStrip(QWidget):
             if label._selected:
                 if label._just_unignored:
                     label._just_unignored = False
-                    label.set_catch_color("black")
+                    label.set_catch_color(LABEL_COLOR_CATCH)
                 else:
                     label.set_catch_color(self._catch_color_for(path.stem))
                 self.sprite_selected.emit(path.stem)

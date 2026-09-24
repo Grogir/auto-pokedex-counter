@@ -38,6 +38,16 @@ else:
 
 THRESHOLD = 0.85
 
+# Label background colors.
+LABEL_COLOR_CATCH = "black"
+LABEL_COLOR_WR_MARKED = "limegreen"
+LABEL_COLOR_OFF_ROUTE = "greenyellow"
+LABEL_COLOR_BONUS = "red"
+LABEL_COLOR_IGNORED = "gray"
+LABEL_COLOR_REQUIRED = "dodgerblue"
+LABEL_COLOR_SECTION_BONUS = "lightpink"
+LABEL_COLOR_BOX_COUNT = "gray"
+
 # Minimum gap (0-255 grayscale units) required between adjacent k-means
 # shade-cluster centers for canonicalize_shades() to trust the clustering.
 # Below this, treat the crop as having no reliable 4-shade structure

@@ -2,6 +2,13 @@ from pathlib import Path
 
 import pytest
 
+from pokedex_counter.config import (
+    LABEL_COLOR_BONUS,
+    LABEL_COLOR_CATCH,
+    LABEL_COLOR_REQUIRED,
+    LABEL_COLOR_SECTION_BONUS,
+    LABEL_COLOR_WR_MARKED,
+)
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 
 
@@ -39,7 +46,21 @@ def test_deselect_does_not_emit_clicked(label, qtbot):
 def test_wr_mark_shows_blue_while_uncaught(label):
     label.set_wr_marked(True)
 
-    assert "background-color: blue;" in label.styleSheet()
+    assert f"background-color: {LABEL_COLOR_WR_MARKED};" in label.styleSheet()
+
+
+def test_required_section_color_wins_over_wr_mark(label):
+    label.set_wr_marked(True)
+    label.set_section_color(LABEL_COLOR_REQUIRED)
+
+    assert f"background-color: {LABEL_COLOR_REQUIRED};" in label.styleSheet()
+
+
+def test_non_required_section_color_does_not_win_over_wr_mark(label):
+    label.set_wr_marked(True)
+    label.set_section_color(LABEL_COLOR_SECTION_BONUS)
+
+    assert f"background-color: {LABEL_COLOR_WR_MARKED};" in label.styleSheet()
 
 
 def test_catch_color_wins_over_the_wr_mark(label):
@@ -48,9 +69,9 @@ def test_catch_color_wins_over_the_wr_mark(label):
     caught - and what lets a bonus red show through on a WR-route sprite."""
     label.set_wr_marked(True)
 
-    label.select("red")
+    label.select(LABEL_COLOR_BONUS)
 
-    assert "background-color: red;" in label.styleSheet()
+    assert f"background-color: {LABEL_COLOR_BONUS};" in label.styleSheet()
 
 
 def test_set_catch_color_is_inert_on_an_uncaught_label(label):
@@ -58,7 +79,7 @@ def test_set_catch_color_is_inert_on_an_uncaught_label(label):
     not. On an uncaught one that must neither repaint it nor survive into
     the next catch - select() always states the color it wants, so callers
     can't rely on a color pushed ahead of time."""
-    label.set_catch_color("red")
+    label.set_catch_color(LABEL_COLOR_BONUS)
     assert "background-color" not in label.styleSheet()
 
     label.select()
@@ -67,7 +88,7 @@ def test_set_catch_color_is_inert_on_an_uncaught_label(label):
 
 
 def test_deselect_drops_a_previous_catch_color(label):
-    label.select("red")
+    label.select(LABEL_COLOR_BONUS)
     label.deselect()
 
     assert "background-color" not in label.styleSheet()

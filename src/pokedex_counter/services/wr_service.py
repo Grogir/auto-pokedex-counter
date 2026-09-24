@@ -1,16 +1,17 @@
 import json
 
 from pokedex_counter.config import WR_JSON_PATH
+from pokedex_counter.controllers.game_controller import GameController
 
 
 def load_wr_sections() -> dict[int, set[str]]:
-    """Maps DetectionService section index -> dex numbers considered "on
-    route" for that section, per WR.json. Missing/unreadable file means the
-    feature is quietly unavailable (compare_to_wr just has nothing to mark).
+    """Rebuild WR sections according to the currently configured route.
 
-    WR.json's keys already line up 1:1 with DetectionService's section
-    indices, including the dedicated evolution section at the end (see
-    roi_config.py's CATCH_SECTIONS_RAW)."""
+    The section keys in WR.json describe the route used to record the
+    comparison and are deliberately ignored. Feeding the recorded Pokémon to
+    a temporary controller lets the active route determine each Pokémon's
+    actual section, including the dedicated evolution section.
+    """
     if not WR_JSON_PATH.is_file():
         return {}
 
@@ -21,4 +22,12 @@ def load_wr_sections() -> dict[int, set[str]]:
         print(f"[wr_service] WARNING: failed to load '{WR_JSON_PATH}', compare-to-WR disabled: {e}")
         return {}
 
-    return {int(key): set(names) for key, names in raw.items()}
+    controller = GameController()
+    for names in raw.values():
+        for name in names:
+            controller.on_detection(name)
+
+    return {
+        section: set(names)
+        for section, names in controller.section_catches.items()
+    }

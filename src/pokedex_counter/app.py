@@ -116,10 +116,19 @@ def run() -> int:
     # --- WR (world record) comparison ---
     wr_sections = load_wr_sections()
 
+    def wr_names_up_to(section_index: int) -> set[str]:
+        return set().union(
+            *(wr_sections.get(index, set()) for index in range(section_index + 1))
+        )
+
     def apply_section(section_index: int) -> None:
         sections = ROUTE_SECTIONS
         if section_index >= len(sections):
             window.sprite_strip.set_current_section(set(), set())
+            if settings.compare_to_wr_checkbox.isChecked():
+                window.sprite_strip.set_wr_names(
+                    wr_names_up_to(len(sections) - 1)
+                )
             return
         route_section = sections[section_index]
         window.sprite_strip.set_current_section(
@@ -127,7 +136,7 @@ def run() -> int:
             set(route_section.bonuses),
         )
         if settings.compare_to_wr_checkbox.isChecked():
-            window.sprite_strip.mark_wr_section(wr_sections.get(section_index, set()))
+            window.sprite_strip.set_wr_names(wr_names_up_to(section_index))
 
     def apply_section_up_to_current() -> None:
         """Backfill every section's marks up to the active one - not just

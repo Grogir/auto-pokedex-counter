@@ -17,6 +17,12 @@ import re
 
 import pytest
 from PySide6.QtCore import Qt
+from pokedex_counter.config import (
+    LABEL_COLOR_BONUS,
+    LABEL_COLOR_CATCH,
+    LABEL_COLOR_OFF_ROUTE,
+    LABEL_COLOR_WR_MARKED,
+)
 
 from pokedex_counter.config import SPRITES_DIR
 from pokedex_counter.ui.widgets import sprite_strip as sprite_strip_module
@@ -105,15 +111,15 @@ def test_reload_reuses_cached_pixmaps(qtbot, monkeypatch):
 
 def test_catch_is_black_when_no_feature_is_on(sprite_strip):
     sprite_strip.select_sprite("1")
-    assert color_of(sprite_strip, "1") == "black"
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH
 
 
 def test_wr_route_sprite_is_blue_until_it_is_caught(sprite_strip):
     sprite_strip.mark_wr_section({"1"})
-    assert color_of(sprite_strip, "1") == "blue"
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_WR_MARKED
 
     sprite_strip.select_sprite("1")
-    assert color_of(sprite_strip, "1") == "black"
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH
 
 
 def test_off_route_catch_is_green_while_comparing_to_wr(sprite_strip):
@@ -121,7 +127,25 @@ def test_off_route_catch_is_green_while_comparing_to_wr(sprite_strip):
 
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "4") == "green"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+
+
+def test_returning_to_an_earlier_section_removes_future_wr_names(sprite_strip):
+    sprite_strip.set_wr_names({"1", "4"})
+    sprite_strip.set_wr_names({"1"})
+
+    sprite_strip.select_sprite("4")
+
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+
+
+def test_wr_route_remains_active_after_the_last_section(sprite_strip):
+    sprite_strip.set_wr_names({"1"})
+    sprite_strip.set_current_section(set(), set())
+
+    sprite_strip.select_sprite("4")
+
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
 
 
 # --- bonus highlighting ---
@@ -131,7 +155,7 @@ def test_bonus_catch_is_red(sprite_strip):
 
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_bonus_is_not_highlighted_before_it_is_caught(sprite_strip):
@@ -149,17 +173,17 @@ def test_bonus_outranks_both_wr_catch_colors(sprite_strip):
     sprite_strip.select_sprite("1")
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "1") == "red"
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_enabling_bonuses_recolors_catches_already_made(sprite_strip):
     sprite_strip.select_sprite("4")
-    assert color_of(sprite_strip, "4") == "black"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
 
     sprite_strip.set_bonus_names({"4"})
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_disabling_bonuses_puts_catches_back_to_their_wr_color(sprite_strip):
@@ -170,8 +194,8 @@ def test_disabling_bonuses_puts_catches_back_to_their_wr_color(sprite_strip):
 
     sprite_strip.set_bonus_names(set())
 
-    assert color_of(sprite_strip, "1") == "black"  # on route
-    assert color_of(sprite_strip, "4") == "green"  # off route
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH  # on route
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE  # off route
 
 
 def test_reaching_a_bonus_wr_section_does_not_clobber_its_red(sprite_strip):
@@ -184,7 +208,7 @@ def test_reaching_a_bonus_wr_section_does_not_clobber_its_red(sprite_strip):
 
     sprite_strip.mark_wr_section({"4"})  # its section arrives: on route after all
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_bonus_names_missing_from_the_strip_are_ignored(sprite_strip):
@@ -194,7 +218,7 @@ def test_bonus_names_missing_from_the_strip_are_ignored(sprite_strip):
 
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_bonus_highlighting_survives_a_reset(sprite_strip):
@@ -207,7 +231,7 @@ def test_bonus_highlighting_survives_a_reset(sprite_strip):
     assert color_of(sprite_strip, "4") is None
 
     sprite_strip.select_sprite("4")
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 # --- evolutions are not bonuses ---
@@ -219,7 +243,7 @@ def test_evolving_into_a_bonus_is_not_highlighted(sprite_strip):
 
     sprite_strip.select_sprite("4", evolved=True)
 
-    assert color_of(sprite_strip, "4") == "black"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
 
 
 def test_an_evolved_bonus_stays_black_when_highlighting_is_turned_on_later(sprite_strip):
@@ -229,7 +253,7 @@ def test_an_evolved_bonus_stays_black_when_highlighting_is_turned_on_later(sprit
 
     sprite_strip.set_bonus_names({"4"})
 
-    assert color_of(sprite_strip, "4") == "black"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
 
 
 def test_an_evolved_bonus_still_gets_its_wr_color(sprite_strip):
@@ -240,7 +264,7 @@ def test_an_evolved_bonus_still_gets_its_wr_color(sprite_strip):
 
     sprite_strip.select_sprite("4", evolved=True)
 
-    assert color_of(sprite_strip, "4") == "green"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
 
 
 def test_forgetting_an_evolved_sprite_lets_it_be_a_bonus_again(sprite_strip):
@@ -250,7 +274,7 @@ def test_forgetting_an_evolved_sprite_lets_it_be_a_bonus_again(sprite_strip):
     sprite_strip.deselect_sprite("4")
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 def test_reset_forgets_that_a_bonus_was_evolved(sprite_strip):
@@ -260,7 +284,7 @@ def test_reset_forgets_that_a_bonus_was_evolved(sprite_strip):
     sprite_strip.reset()
     sprite_strip.select_sprite("4")
 
-    assert color_of(sprite_strip, "4") == "red"
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
 
 
 # --- hand-clicked catches ---
@@ -278,9 +302,9 @@ def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip, q
         label.show()
         qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
-    assert color_of(sprite_strip, "4") == "red"    # bonus
-    assert color_of(sprite_strip, "1") == "black"  # on route
-    assert color_of(sprite_strip, "7") == "green"  # off route
+    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS  # bonus
+    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH  # on route
+    assert color_of(sprite_strip, "7") == LABEL_COLOR_OFF_ROUTE  # off route
 
 
 def test_manual_unclick_clears_the_highlight_and_the_count(sprite_strip, qtbot):

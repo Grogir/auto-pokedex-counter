@@ -17,7 +17,7 @@ from pokedex_counter.app import (
     wire_found_pokemon,
 )
 from pokedex_counter.boxes_window import BoxesWindow
-from pokedex_counter.config import SPRITES_DIR
+from pokedex_counter.config import LABEL_COLOR_BONUS, LABEL_COLOR_CATCH, SPRITES_DIR
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.roi_config import CATCH_SECTIONS
 from pokedex_counter.settings_window import SettingsWindow
@@ -126,7 +126,7 @@ def test_the_same_pokemon_reaches_the_strip_as_an_evolution_elsewhere(found_wiri
 
 @pytest.mark.parametrize(
     "section_kind, expected_color",
-    [("caught", "red"), ("evolved", "black")],
+    [("caught", LABEL_COLOR_BONUS), ("evolved", LABEL_COLOR_CATCH)],
 )
 def test_manual_bonus_click_color_follows_the_active_section(
     found_wiring, section_kind, expected_color, qtbot
