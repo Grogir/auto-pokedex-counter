@@ -30,6 +30,13 @@ All 151 sprites plus a running "N caught". Catching a Pokémon highlights its sp
 
 **Clicking a sprite marks or unmarks it by hand**, for when the detector misses a catch or flags one it shouldn't. Unmarking also lets that Pokémon be detected again later.
 
+Right-clicking a sprite toggles **ignored** (gray). An ignored Pokémon
+completes a route section but is not added to the global count or the boxes.
+Left-clicking an ignored sprite catches it normally in black; pressing the
+right button again simply removes the ignored state. Press **Backspace** to
+force-detect every required Pokémon in the current section, even when the app
+is not focused.
+
 Until at least one region has been calibrated, the count is replaced by a prompt to calibrate — detection can't run at all in that state, so showing "0 caught" would look like it was working.
 
 ### The settings window
@@ -45,9 +52,20 @@ Until at least one region has been calibrated, the count is replaced by a prompt
 
 The four settings above the buttons are remembered between launches.
 
-### Sprite colors
+### Route and sprite colors
 
-With both comparison settings off, every catch is plain **black**. Turning them on adds:
+The section route is read from `resources/route/route.txt`.
+
+The current section colors uncaught icons as follows:
+
+- **Light blue** — required to complete the current section.
+- **Light red** — an optional bonus for the current section. It only becomes
+  a red caught Pokémon when it is also present in the global `BONUSES` list.
+- **Gray** — ignored with the right mouse button.
+- **Black** — obtained normally.
+
+The first list must be entirely obtained (or ignored) before the next section
+becomes active. The existing WR comparison can still add its own colors:
 
 - **Blue** — on the WR route for a section you've already reached, but not caught yet. In other words, the WR run would have it by now and you don't. These accumulate as the run progresses, so one missed in its own section stays flagged.
 - **Black** — caught, and on the WR route.
@@ -56,7 +74,8 @@ With both comparison settings off, every catch is plain **black**. Turning them 
 
 Resetting the counter clears the accumulated blue marks so the next run re-earns them section by section. Bonus highlighting is a fixed list, so it just stays on.
 
-The WR route is bundled as `resources/comparison/WR.json`; if it's missing or unreadable, "Compare to WR?" simply has nothing to mark. Which Pokémon count as bonuses is the `BONUSES` list in `roi_config.py`.
+The WR route is bundled as `resources/comparison/WR.json`; if it's missing or unreadable, "Compare to WR?" simply has nothing to mark. The route file, rather than `roi_config.py`, is the source of section and
+bonus data.
 
 ### Personal best
 
@@ -109,6 +128,7 @@ src/pokedex_counter/
     capture_service.py        Camera capture thread
     calibration_service.py    Live ROI calibration against the title screen
     detection_service.py      Per-frame catch/evolve/text detection
+    route_service.py          Loads and validates route.json or route.txt
     template_service.py       Loads sprite template images
     wr_service.py             Loads the world-record route from WR.json
     pb_service.py             Saves a completed run to PB.json

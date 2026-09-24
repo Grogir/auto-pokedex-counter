@@ -1,13 +1,13 @@
 # core/controller.py
 from PySide6.QtCore import QObject, Signal
 
-from pokedex_counter.roi_config import SECTION_TRIGGERS, is_evolution
+from pokedex_counter.game_config import ROUTE_SECTIONS, is_evolution
 
 class GameController(QObject):
     # (dex number, section it was found in). The section rides along because
     # the same dex number can be routed differently per section - notably as
     # a catch in one and an evolution in another - and the UI needs to know
-    # which happened to color it (see roi_config.is_evolution).
+    # which happened to color it (see is_evolution below).
     pokemon_found = Signal(str, int, bool)
     count_changed = Signal(int)
     section_changed = Signal(int)
@@ -15,6 +15,7 @@ class GameController(QObject):
     def __init__(self):
         super().__init__()
         self.found = set()
+        self.ignored = set()
         self.count = 0
         # Current run's catches grouped by section, in catch order - same
         # {section_index: [dex, ...]} shape PB.json is saved in (see
@@ -24,11 +25,17 @@ class GameController(QObject):
         self.section_catches: dict[int, list[str]] = {}
 
     def current_section(self) -> int:
-        """Return the active route section from this run's found Pokemon."""
-        last = len(SECTION_TRIGGERS) - 1
+        """Return the first incomplete section, or the section count when done."""
+        obtained = self.found | self.ignored
+        sections = ROUTE_SECTIONS
         section = 0
-        while section < last and SECTION_TRIGGERS[section] in self.found:
+        while section < len(sections) - 1:
+            route_section = sections[section]
+            if len(set(route_section.required) & obtained) < route_section.minimum:
+                break
             section += 1
+        if len(set(sections[section].required) & obtained) >= sections[section].minimum:
+            return len(sections)
         return section
 
     def current_count(self) -> int:
@@ -42,13 +49,17 @@ class GameController(QObject):
         controller; this method does not represent a second section state.
         """
         self.found.update(
-            trigger
-            for trigger in SECTION_TRIGGERS[:section]
-            if trigger is not None
+            name
+            for route_section in ROUTE_SECTIONS[:section]
+            for name in route_section.required
         )
 
     def on_detection(self, name: str) -> None:
         section = self.current_section()
+        self._record_detection(name, section)
+
+    def _record_detection(self, name: str, section: int) -> None:
+        self.ignored.discard(name)
         is_new = name not in self.found
         self.found.add(name)
         if is_new:
@@ -75,8 +86,31 @@ class GameController(QObject):
         self.count_changed.emit(self.count)
         self.section_changed.emit(self.current_section())
 
+    def ignore(self, name: str) -> None:
+        """Exclude a Pokémon from the global run while satisfying sections."""
+        self.forget(name)
+        self.ignored.add(name)
+        self.section_changed.emit(self.current_section())
+
+    def unignore(self, name: str) -> None:
+        if name in self.ignored:
+            self.ignored.remove(name)
+            self.section_changed.emit(self.current_section())
+
+    def force_detect_current_section(self) -> None:
+        """Detect only missing required Pokémon from the current section."""
+        section = self.current_section()
+        sections = ROUTE_SECTIONS
+        if section >= len(sections):
+            return
+        missing = [name for name in sections[section].required if name not in self.found and name not in self.ignored]
+        done = len(sections[section].required) - len(missing)
+        for name in missing[:sections[section].minimum - done]:
+            self._record_detection(name, section)
+
     def reset(self) -> None:
         self.found.clear()
+        self.ignored.clear()
         self.count = 0
         self.section_catches.clear()
         self.count_changed.emit(self.count)

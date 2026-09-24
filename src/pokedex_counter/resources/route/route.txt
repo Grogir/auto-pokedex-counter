@@ -1,0 +1,86 @@
+Bulbasaur
+Pidgey
+Caterpie
+Dugtrio
+Ekans
+Paras
+Nidoran♀
+Nidoran♂
+Exeggcute
+Mr.Mime
+Golem
+Mewtwo - Dodrio Venomoth Kadabra Rhydon Marowak Electrode Wigglytuff Golbat Hypno Magneton Sandslash Parasect Raichu
+Tauros - Rhydon Marowak Electrode Parasect Raichu Sandslash
+Chansey
+Alakazam
+Kangaskhan
+Magneton
+Seel Psyduck Magikarp Shellder Krabby Staryu - Golbat Golduck Kingler Dewgong
+Articuno
+min:3 Machop Geodude Onix Zubat - Venomoth Graveler Golbat Machoke Marowak
+Machamp - Venomoth Graveler Golbat Machoke Marowak
+Machop Geodude Onix Zubat
+Scyther
+Moltres - Sandshrew Drowzee Spearow
+Koffing - Sandshrew Drowzee Spearow
+Diglett - Sandshrew Drowzee Spearow
+Sandshrew Drowzee Hitmonchan Venonat Growlithe - Spearow
+Gastly
+Magmar
+Fearow
+Vulpix
+Gengar
+Tentacool - Rattata Raticate
+Pidgeotto - Rattata Raticate
+Charmander - Rattata Raticate
+Tangela
+Dragonite
+Snorlax
+Rhyhorn - Spearow Rattata Doduo Raticate
+Metapod
+min:2 Spearow Rattata Doduo - Raticate
+Kabuto - Raticate
+Horsea
+Spearow Rattata Doduo
+Mew
+Goldeen
+Cubone - Jigglypuff
+Jigglypuff
+evo:Exeggutor
+evo:Nidorina
+evo:Nidoqueen - evo:Parasect
+Oddish
+Zapdos - Pikachu Magnemite Raichu
+Voltorb - Pikachu Magnemite Raichu
+min:1 Pikachu Magnemite
+Farfetch'd - Pikachu Magnemite Raichu
+Pikachu Magnemite
+Hitmonlee
+Squirtle
+Clefairy - Dratini
+Nidorino
+Abra
+Dratini
+Porygon
+Pinsir
+Mankey - Bellsprout
+Bellsprout
+Ivysaur
+Lapras
+Weedle
+Omanyte
+Jynx
+Ditto
+Aerodactyl
+Meowth
+Eevee
+Lickitung
+Eevee
+Slowpoke
+Eevee
+Poliwag
+Weezing
+min:1 Grimer Ponyta - Muk
+Electabuzz - Grimer Ponyta Muk
+Grimer Ponyta - Muk
+evo:Arbok evo:Parasect evo:Haunter evo:Dragonair evo:Clefable evo:Nidoking evo:Kadabra - Muk

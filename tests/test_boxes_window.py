@@ -40,6 +40,7 @@ def test_evolution_is_remembered_but_not_assigned_a_slot(qtbot):
 
 
 def test_hidden_pokemon_keeps_the_real_slot_number(qtbot, monkeypatch):
+    monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
     monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"10", "70"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
@@ -57,6 +58,7 @@ def test_hidden_pokemon_keeps_the_real_slot_number(qtbot, monkeypatch):
 
 
 def test_box_slot_labels_skip_displayed_pokemon(qtbot, monkeypatch):
+    monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
     monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"7", "8"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
@@ -70,6 +72,7 @@ def test_box_slot_labels_skip_displayed_pokemon(qtbot, monkeypatch):
 
 
 def test_team_slot_labels_keep_their_physical_positions(qtbot, monkeypatch):
+    monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
     monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"7", "8"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)

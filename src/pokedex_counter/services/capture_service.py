@@ -1,6 +1,6 @@
 import cv2
 from PySide6.QtCore import QThread, Signal
-from pokedex_counter.config import FRAME_SIZE
+from pokedex_counter.config import FRAME_SIZE_DETECTION
 
 class CaptureService(QThread):
     frame_ready = Signal(object)
@@ -13,8 +13,8 @@ class CaptureService(QThread):
             self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
         else:
             self.cap = cv2.VideoCapture(source)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE[0])
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE[1])
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE_DETECTION[0])
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE_DETECTION[1])
         self.running = True
 
     def run(self):

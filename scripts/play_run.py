@@ -8,7 +8,7 @@ from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import COMPARISON_DIR, PB_JSON_PATH, WR_JSON_PATH
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.main_window import MainWindow
-from pokedex_counter.roi_config import BONUSES
+from pokedex_counter.game_config import BONUSES
 
 RUN_PATH = COMPARISON_DIR / "WR_noafo.json"
 WAIT_MS = 50

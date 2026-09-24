@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 
 class ClickableLabel(QLabel):
     clicked = Signal(Path)
+    ignore_toggled = Signal(Path, bool)
 
     def __init__(self, path: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -16,21 +17,30 @@ class ClickableLabel(QLabel):
         self._padding = 0
         self._selected = False
         self._wr_marked = False
+        self._section_color = None
+        self._ignored = False
+        self._just_unignored = False
         self._catch_color = "black"
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self.toggle_selected()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.set_ignored(not self._ignored)
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         event.accept()
 
     def toggle_selected(self) -> None:
+        was_ignored = self._ignored
+        if was_ignored:
+            self._ignored = False
         self._selected = not self._selected
         if self._selected:
             self._catch_color = "black"
+            self._just_unignored = was_ignored
         self._apply_style()
         self.clicked.emit(self._path)
 
@@ -39,8 +49,21 @@ class ClickableLabel(QLabel):
         if self._selected:
             return
         self._selected = True
+        self._ignored = False
         self._catch_color = color
         self._apply_style()
+
+    def set_ignored(self, ignored: bool) -> None:
+        if self._ignored == ignored:
+            return
+        self._ignored = ignored
+        if ignored:
+            self._selected = False
+        self._apply_style()
+        self.ignore_toggled.emit(self._path, ignored)
+
+    def clear_ignored(self) -> None:
+        self.set_ignored(False)
 
     def deselect(self) -> None:
         """Programmatically deselect (idempotent - no-op if not selected)."""
@@ -57,6 +80,10 @@ class ClickableLabel(QLabel):
         if self._wr_marked == marked:
             return
         self._wr_marked = marked
+        self._apply_style()
+
+    def set_section_color(self, color: str | None) -> None:
+        self._section_color = color
         self._apply_style()
 
     def set_catch_color(self, color: str) -> None:
@@ -77,9 +104,13 @@ class ClickableLabel(QLabel):
 
     def _apply_style(self) -> None:
         base_style = f"padding: {self._padding}px;"
-        if self._selected:
+        if self._ignored:
+            self.setStyleSheet(base_style + "background-color: gray;")
+        elif self._selected:
             self.setStyleSheet(base_style + f"background-color: {self._catch_color};")
         elif self._wr_marked:
             self.setStyleSheet(base_style + "background-color: blue;")
+        elif self._section_color:
+            self.setStyleSheet(base_style + f"background-color: {self._section_color};")
         else:
             self.setStyleSheet(base_style)

@@ -6,23 +6,23 @@ def test_duplicate_catches_are_logged_and_counted_once():
     findings = []
     controller.pokemon_found.connect(lambda *finding: findings.append(finding))
 
-    controller.on_detection("1")
-    controller.on_detection("1")
+    controller.on_detection("4")
+    controller.on_detection("4")
 
     assert controller.count == 1
-    assert controller.found == {"1"}
-    assert controller.section_catches == {0: ["1", "1"]}
-    assert [finding[0] for finding in findings] == ["1", "1"]
+    assert controller.found == {"4"}
+    assert controller.section_catches == {0: ["4", "4"]}
+    assert [finding[0] for finding in findings] == ["4", "4"]
 
 
 def test_section_is_derived_from_found_triggers():
     controller = GameController()
 
-    controller.on_detection("122")
-    controller.on_detection("115")
+    controller.on_detection("1")
+    controller.on_detection("16")
 
     assert controller.current_section() == 2
-    assert [names for names in controller.section_catches.values()] == [["122"], ["115"]]
+    assert [names for names in controller.section_catches.values()] == [["1"], ["16"]]
 
 
 def test_forgetting_a_pokemon_removes_all_duplicates():

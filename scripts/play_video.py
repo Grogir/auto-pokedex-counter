@@ -10,7 +10,7 @@ from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import COMPARISON_DIR, PB_JSON_PATH, WR_JSON_PATH
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.main_window import MainWindow
-from pokedex_counter.roi_config import BONUSES
+from pokedex_counter.game_config import BONUSES
 # from pokedex_counter.services.calibration_service import DEFAULT_SCALES
 from pokedex_counter.services.capture_service import CaptureService
 from pokedex_counter.services.detection_service import DetectionService

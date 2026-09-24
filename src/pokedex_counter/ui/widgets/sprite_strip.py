@@ -20,6 +20,7 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 class SpriteStrip(QWidget):
     sprite_selected = Signal(Path)
     sprite_deselected = Signal(str)
+    sprite_ignored = Signal(str, bool)
 
     def __init__(self, folder: Path, sprite_size: int = 24, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -32,6 +33,8 @@ class SpriteStrip(QWidget):
         self._wr_enabled = False
         self._wr_names: set[str] = set()
         self._bonus_names: set[str] = set()
+        self._section_names: set[str] = set()
+        self._section_bonus_names: set[str] = set()
         # Caught sprites that got here by evolving rather than by being
         # caught. Remembered per sprite (not just consulted once at catch
         # time) so the retroactive recolor in set_bonus_names can tell the
@@ -87,6 +90,7 @@ class SpriteStrip(QWidget):
         self.draw_image_in_label(label)
 
         label.clicked.connect(self._on_manual_click)
+        label.ignore_toggled.connect(self._on_ignored)
 
         return label
 
@@ -147,6 +151,18 @@ class SpriteStrip(QWidget):
         if self._wr_enabled and name not in self._wr_names:
             return "green"
         return "black"
+
+    def set_current_section(self, required: set[str], bonuses: set[str]) -> None:
+        self._section_names = set(required)
+        self._section_bonus_names = set(bonuses)
+        for name, label in self._labels_by_name.items():
+            label.set_wr_marked(False)
+            if name in self._section_names:
+                label.set_section_color("dodgerblue")
+            elif name in self._section_bonus_names:
+                label.set_section_color("lightpink")
+            else:
+                label.set_section_color(None)
 
     def select_sprite(self, name: str, evolved: bool = False) -> bool:
         """Mark `name` as obtained. `evolved` says it was obtained by
@@ -224,6 +240,7 @@ class SpriteStrip(QWidget):
         every section the previous run ever reached still lit up blue."""
         for name in self._labels_by_name:
             self.deselect_sprite(name)
+            self._labels_by_name[name].clear_ignored()
         if self._wr_enabled:
             self.clear_wr_marks()
 
@@ -244,8 +261,15 @@ class SpriteStrip(QWidget):
 
         if isinstance(label, ClickableLabel):
             if label._selected:
-                label.set_catch_color(self._catch_color_for(path.stem))
+                if label._just_unignored:
+                    label._just_unignored = False
+                    label.set_catch_color("black")
+                else:
+                    label.set_catch_color(self._catch_color_for(path.stem))
                 self.sprite_selected.emit(path.stem)
             else:
                 self._evolved_names.discard(path.stem)
                 self.sprite_deselected.emit(path.stem)
+
+    def _on_ignored(self, path: Path, ignored: bool) -> None:
+        self.sprite_ignored.emit(path.stem, ignored)

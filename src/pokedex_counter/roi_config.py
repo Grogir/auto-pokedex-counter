@@ -35,50 +35,6 @@ EVOLVE_NAMES = {
     "141", "148",
 }
 
-# Dex numbers that count as a "bonus" catch. Purely cosmetic: with the
-# "Highlight bonuses" setting on, catching one of these lights it up red
-# instead of the usual black. Detection and routing ignore this entirely,
-# so a number listed here doesn't have to appear in CATCH_SECTIONS_RAW.
-#
-# Every one of these is an evolved form, so "obtained" alone doesn't make it
-# a bonus - only actually catching it in the wild does, since evolving into
-# it is the routine path the highlight exists to stand out from. See
-# is_evolution() for how the two are told apart.
-#
-# In dex order: Raticate, Raichu, Sandslash, Wigglytuff, Golbat, Parasect,
-# Venomoth, Golduck, Kadabra, Machoke, Graveler, Dodrio, Dewgong, Muk,
-# Hypno, Kingler, Electrode, Marowak, Rhydon.
-BONUSES: set[str] = {
-    "20", "26", "28", "40", "42", "47", "49", "55", "64", "67",
-    "75", "85", "87", "89", "97", "99", "101", "105", "112",
-}
-
-# Hand-authored catch route: this specific playthrough's actual order,
-# which does NOT follow ascending dex-number order (some Pokemon are only
-# reachable well out of dex order, or via a detour). Detection only looks
-# for the Pokemon in the currently active section (see DetectionService);
-# a section's LAST entry is the trigger that advances to the next section.
-# Order otherwise within a section doesn't matter. A dex number may repeat
-# across sections if it can legitimately be caught in more than one of
-# them.
-CATCH_SECTIONS_RAW: list[list[str]] = [
-    ["1", "16", "10", "50", "51", "46", "29", "32", "102", "23", "122"],
-    ["76", "97", "42", "28", "47", "64", "82", "40", "128", "113", "101",
-     "85", "49", "26", "65", "112", "105", "150", "115"],
-    ["82", "90", "54", "55", "42", "98", "99", "86", "87", "120", "129", "144"],
-    ["66", "67", "74", "75", "42", "105", "49", "41", "95", "67", "68", "123"],
-    ["21", "96", "27", "107", "58", "50", "109", "146", "11", "48"],
-    ["92", "126", "94", "22", "37", "19", "20", "17", "72", "4", "114"],
-    ["21", "19", "84", "20", "111", "11", "140", "116", "149", "143", "151"],
-    ["118", "39", "104", "47", "103", "30", "31", "43"],
-    ["25", "81", "26", "100", "145", "83", "106", "7"],
-    ["33", "35", "63", "127", "137", "147", "69", "56", "2", "131", "13"],
-    ["138", "142", "133", "124", "132", "52", "77", "88", "89", "110", "125",
-     "60", "79", "108", "93", "24", "64", "34", "36", "47", "148"],
-    ["93", "24", "64", "34", "36", "47"],  # dedicated evolution section - these
-    # five repeat from the section above (still catchable there too); the
-    # rest is filled in by build_catch_sections()'s sweep
-]
 
 # Within these sections, these dex numbers refer to their ROI_EVOLVE event
 # rather than the default CATCH/TEXT one.
@@ -90,14 +46,24 @@ SECTION_EVOLVE_OVERRIDES: dict[int, set[str]] = {
 
 # The dex number whose detection advances to the next section. The final
 # section has none - there's nothing left to advance to.
-SECTION_TRIGGERS: list[str | None] = [
-    names[-1] if idx < len(CATCH_SECTIONS_RAW) - 1 else None
-    for idx, names in enumerate(CATCH_SECTIONS_RAW)
+# SECTION_TRIGGERS: list[str | None] = [
+#     names[-1] if idx < len(CATCH_SECTIONS_RAW) - 1 else None
+#     for idx, names in enumerate(CATCH_SECTIONS_RAW)
+# ]
+
+# The route file is the source of truth for the active section system. Keep
+# the legacy names below as compatibility data for the WR/evolution views.
+from pokedex_counter.game_config import ROUTE_SECTIONS, is_evolution
+
+CATCH_SECTIONS_RAW = [section.required + section.bonuses for section in ROUTE_SECTIONS]
+SECTION_TRIGGERS = [
+    required[-1] if index < len(CATCH_SECTIONS_RAW) else None
+    for index, required in enumerate(CATCH_SECTIONS_RAW)
 ]
 
 
 def _entry_type(section_index: int, name: str) -> str:
-    if name in SECTION_EVOLVE_OVERRIDES.get(section_index, ()):
+    if name in ROUTE_SECTIONS[section_index].evolutions:
         return "EVOLVE"
     if name in TEXT_NAMES:
         return "TEXT"
@@ -114,7 +80,8 @@ def build_catch_sections() -> list[list[tuple[str, str]]]:
         for idx, names in enumerate(CATCH_SECTIONS_RAW)
     ]
     placed_evolves = {name for section in sections for name, rtype in section if rtype == "EVOLVE"}
-    sections[-1] += [(name, "EVOLVE") for name in sorted(EVOLVE_NAMES - placed_evolves, key=int)]
+    # sections[-1] += [(name, "EVOLVE") for name in sorted(EVOLVE_NAMES - placed_evolves, key=int)]
+    sections += [[(name, "EVOLVE") for name in sorted(EVOLVE_NAMES - placed_evolves, key=int)]]
     return sections
 
 
@@ -137,14 +104,6 @@ def build_evolution_entries() -> list[set[str]]:
 
 
 EVOLUTION_ENTRIES: list[set[str]] = build_evolution_entries()
-
-
-def is_evolution(section_index: int, name: str) -> bool:
-    """Whether obtaining `name` while section `section_index` is active means
-    it evolved rather than that it was caught."""
-    if not 0 <= section_index < len(EVOLUTION_ENTRIES):
-        return False
-    return name in EVOLUTION_ENTRIES[section_index]
 
 
 def build_detection_entries(templates: dict, locked: dict[str, tuple[int, int, int, int]] | None = None):

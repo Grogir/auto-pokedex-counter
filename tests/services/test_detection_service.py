@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from pokedex_counter.config import FRAME_SIZE, SPRITES_BG_DIR, THRESHOLD
+from pokedex_counter.config import FRAME_SIZE_DETECTION, SPRITES_BG_DIR, THRESHOLD
 from pokedex_counter.roi_config import SECTION_TRIGGERS, build_detection_entries
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.template_service import TemplateService
@@ -16,25 +16,26 @@ DETECTION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "detection"
 # expected_section is where `expected_name` actually lives in CATCH_SECTIONS,
 # since detection is only active for the current section - see
 # _prime_to_section below.
-DETECTION_CASES = [
-    ("calibration_01.png", "catch", "catch_01.png", "97", 1),
-    ("calibration_01.png", "evolve", "evolve_01.png", "80", 11),
-    ("calibration_01.png", "text", "text_01.png", "35", 9),
-    ("calibration_02.png", "catch", "catch_02.png", "97", 1),
-    ("calibration_02.png", "evolve", "evolve_02.png", "80", 11),
-    ("calibration_02.png", "text", "text_02.png", "35", 9),
+SEC_HYPNO, SEC_CLEF, SEC_SLOWBRO = 11, 59, 86
+DETECTION_IMAGE_CASES = [
+    ("calibration_01.png", "catch", "catch_01.png", "97", SEC_HYPNO),
+    ("calibration_01.png", "evolve", "evolve_01.png", "80", SEC_SLOWBRO),
+    ("calibration_01.png", "text", "text_01.png", "35", SEC_CLEF),
+    ("calibration_02.png", "catch", "catch_02.png", "97", SEC_HYPNO),
+    ("calibration_02.png", "evolve", "evolve_02.png", "80", SEC_SLOWBRO),
+    ("calibration_02.png", "text", "text_02.png", "35", SEC_CLEF),
     # Real captures of the same screens under a different (non-default) GBC
     # hardware palette and under a fully inverted ("Negative"-style) one -
     # regression coverage for canonicalize_shades()/the ROI search margin.
-    ("calibration_01.png", "catch", "catch_01_palette.png", "97", 1),
-    ("calibration_01.png", "catch", "catch_01_inverted.png", "97", 1),
-    ("calibration_01.png", "evolve", "evolve_01_palette.png", "80", 11),
-    ("calibration_01.png", "evolve", "evolve_01_inverted.png", "80", 11),
-    ("calibration_01.png", "text", "text_01_palette.png", "35", 9),
-    ("calibration_01.png", "text", "text_01_inverted.png", "35", 9),
+    ("calibration_01.png", "catch", "catch_01_palette.png", "97", SEC_HYPNO),
+    ("calibration_01.png", "catch", "catch_01_inverted.png", "97", SEC_HYPNO),
+    ("calibration_01.png", "evolve", "evolve_01_palette.png", "80", SEC_SLOWBRO),
+    ("calibration_01.png", "evolve", "evolve_01_inverted.png", "80", SEC_SLOWBRO),
+    ("calibration_01.png", "text", "text_01_palette.png", "35", SEC_CLEF),
+    ("calibration_01.png", "text", "text_01_inverted.png", "35", SEC_CLEF),
 ]
 
-TEXTBOX_CASES = [
+DETECTION_TEXTBOX_CASES = [
     ("calibration_03.png", "textbox_catch_03.png", "105"),
     ("calibration_03.png", "textbox_evolve_03.png", "55"),
     ("calibration_03.png", "textbox_name_03.png", "133"),
@@ -56,9 +57,9 @@ def _make_detector(roi_templates):
     detector = DetectionService(roi_templates)
     detector.set_section_provider(
         lambda: next(
-            (section for section, trigger in enumerate(SECTION_TRIGGERS[:-1])
+            (section for section, trigger in enumerate(SECTION_TRIGGERS)
              if trigger not in detector._detected),
-            len(SECTION_TRIGGERS) - 1,
+            len(SECTION_TRIGGERS),
         )
     )
     return detector
@@ -78,7 +79,7 @@ def _prime_to_section(detector, section_index):
 
 
 @pytest.mark.parametrize(
-    "calibration_fixture, label, detection_fixture, expected_name, expected_section", DETECTION_CASES
+    "calibration_fixture, label, detection_fixture, expected_name, expected_section", DETECTION_IMAGE_CASES
 )
 def test_calibrated_roi_detects_expected_pokemon(
     sprite_templates, calibrated_rois, calibration_fixture, label, detection_fixture, expected_name, expected_section
@@ -100,7 +101,7 @@ def test_calibrated_roi_detects_expected_pokemon(
     )
 
 
-@pytest.mark.parametrize("calibration_fixture, detection_fixture, expected_name", TEXTBOX_CASES)
+@pytest.mark.parametrize("calibration_fixture, detection_fixture, expected_name", DETECTION_TEXTBOX_CASES)
 def test_textbox_frames_detect_expected_pokemon(calibration_fixture, detection_fixture, expected_name):
     detector = _make_detector([])
     detections = []
@@ -128,7 +129,7 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     roi_templates = _roi_templates_for("calibration_01.png", sprite_templates, calibrated_rois)
 
     detector = _make_detector(roi_templates)
-    _prime_to_section(detector, 1)  # "97" lives in section 1
+    _prime_to_section(detector, 11)  # "97" lives in section 11
     detections = []
     detector.detection.connect(detections.append)
 
@@ -159,7 +160,7 @@ def _frame_with_pattern_at(roi, pattern):
     """Build a frame containing `pattern` exactly at `roi`. The result is
     pre-flipped so passing it to process_frame (which flips once) lands
     the pattern at `roi` in the coordinates DetectionService crops from."""
-    width, height = FRAME_SIZE
+    width, height = FRAME_SIZE_DETECTION
     frame = np.full((height, width, 3), 127, dtype=np.uint8)
     x, y, w, h = roi
     for channel in range(3):

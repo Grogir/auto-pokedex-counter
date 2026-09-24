@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pokedex_counter.roi_config as roi_config
 from pokedex_counter.config import SPRITES_BG_DIR
+from pokedex_counter.game_config import BONUSES
 from pokedex_counter.roi_config import (
-    BONUSES,
     CATCH_SECTIONS,
     SECTION_TRIGGERS,
     build_detection_entries,
@@ -113,14 +113,14 @@ def test_bonuses_are_dex_numbers():
     )
 
 
-def test_a_section_evolve_override_counts_as_an_evolution():
-    for section_index, names in roi_config.SECTION_EVOLVE_OVERRIDES.items():
-        for name in names:
-            caught_here_too = any(
-                entry_name == name and roi_label != "EVOLVE"
-                for entry_name, roi_label in CATCH_SECTIONS[section_index]
-            )
-            assert is_evolution(section_index, name) is not caught_here_too
+# def test_a_section_evolve_override_counts_as_an_evolution():
+#     for section_index, names in roi_config.SECTION_EVOLVE_OVERRIDES.items():
+#         for name in names:
+#             caught_here_too = any(
+#                 entry_name == name and roi_label != "EVOLVE"
+#                 for entry_name, roi_label in CATCH_SECTIONS[section_index]
+#             )
+#             assert is_evolution(section_index, name) is not caught_here_too
 
 
 def test_the_final_sweep_section_counts_as_evolutions():

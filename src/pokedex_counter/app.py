@@ -1,6 +1,10 @@
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import QPoint, Qt, QSettings
+from PySide6.QtCore import (
+    QPoint,
+    Qt,
+    QSettings,
+)
 
 from pokedex_counter.calibration_runner import run_calibration
 from pokedex_counter.camera import resolve_camera_index
@@ -13,6 +17,8 @@ from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.pb_service import save_pb
 from pokedex_counter.services.template_service import TemplateService
 from pokedex_counter.services.wr_service import load_wr_sections
+from pokedex_counter.services.global_keybind import GlobalKeybind
+from pokedex_counter.game_config import ROUTE_SECTIONS, BONUSES
 from pokedex_counter.settings_window import SettingsWindow
 
 def wire_bonus_highlight(settings: SettingsWindow, sprite_strip, bonuses: set[str]) -> None:
@@ -39,6 +45,11 @@ def wire_found_pokemon(controller: GameController, sprite_strip, boxes_window) -
 
     controller.pokemon_found.connect(on_pokemon_found)
     sprite_strip.sprite_deselected.connect(boxes_window.remove_pokemon)
+    def on_ignore_toggled(name: str, ignored: bool) -> None:
+        if ignored:
+            boxes_window.remove_pokemon(name)
+
+    sprite_strip.sprite_ignored.connect(on_ignore_toggled)
 
 
 def run() -> int:
@@ -49,7 +60,7 @@ def run() -> int:
 
     camera_index = resolve_camera_index()
 
-    from pokedex_counter.roi_config import BONUSES, build_detection_entries, is_calibrated
+    from pokedex_counter.roi_config import build_detection_entries, is_calibrated
 
     app = QApplication([])
 
@@ -105,25 +116,34 @@ def run() -> int:
     # --- WR (world record) comparison ---
     wr_sections = load_wr_sections()
 
-    def apply_wr_section(section_index: int) -> None:
+    def apply_section(section_index: int) -> None:
+        sections = ROUTE_SECTIONS
+        if section_index >= len(sections):
+            window.sprite_strip.set_current_section(set(), set())
+            return
+        route_section = sections[section_index]
+        window.sprite_strip.set_current_section(
+            set(route_section.required),
+            set(route_section.bonuses),
+        )
         if settings.compare_to_wr_checkbox.isChecked():
             window.sprite_strip.mark_wr_section(wr_sections.get(section_index, set()))
 
-    def apply_wr_up_to_current() -> None:
+    def apply_section_up_to_current() -> None:
         """Backfill every section's marks up to the active one - not just
         the current one - so re-enabling mid-run (or starting up already
         past section 0) still flags every WR pokemon missed so far, not
         only ones from here on."""
-        for section_index in range(detector.current_section() + 1):
-            apply_wr_section(section_index)
+        for section_index in range(controller.current_section() + 1):
+            apply_section(section_index)
 
     def on_compare_to_wr_toggled(checked: bool) -> None:
         if checked:
-            apply_wr_up_to_current()
+            apply_section_up_to_current()
         else:
             window.sprite_strip.clear_wr_marks()
 
-    controller.section_changed.connect(apply_wr_section)
+    controller.section_changed.connect(apply_section)
     settings.compare_to_wr_checkbox.toggled.connect(on_compare_to_wr_toggled)
 
     # --- bonus highlighting ---
@@ -138,6 +158,17 @@ def run() -> int:
     window.sprite_strip.sprite_selected.connect(detector.select)
     window.sprite_strip.sprite_deselected.connect(controller.forget)
     window.sprite_strip.sprite_deselected.connect(detector.forget)
+    def on_ignore_toggled(name: str, ignored: bool) -> None:
+        if ignored:
+            controller.ignore(name)
+            detector.forget(name)
+        else:
+            controller.unignore(name)
+
+    window.sprite_strip.sprite_ignored.connect(on_ignore_toggled)
+    global_backspace = GlobalKeybind(0x08, controller.force_detect_current_section)
+    app.installNativeEventFilter(global_backspace)
+    app.aboutToQuit.connect(global_backspace.close)
     settings.columns_spinbox.valueChanged.connect(window.set_sprites_per_row)
     settings.font_size_spinbox.valueChanged.connect(window.set_counter_font_size)
     settings.sprite_width_spinbox.valueChanged.connect(
@@ -174,7 +205,7 @@ def run() -> int:
         boxes_window.reset()
         # reset() drops all WR marks and turns the feature off; re-apply the
         # fresh run's marks now, including when the run was already empty.
-        apply_wr_up_to_current()
+        apply_section_up_to_current()
 
     settings.reset_button.clicked.connect(on_reset_clicked)
     app.aboutToQuit.connect(maybe_prompt_save_pb)
@@ -213,8 +244,9 @@ def run() -> int:
         lambda height: boxes_window.set_sprite_dimensions(settings.box_sprite_width_spinbox.value(), height)
     )
     settings.sprite_padding_spinbox.valueChanged.connect(boxes_window.set_sprite_padding)
+    apply_section(0)
     if settings.compare_to_wr_checkbox.isChecked():
-        apply_wr_up_to_current()
+        apply_section_up_to_current()
     capture.start()
     window.show()
     boxes_window.show()

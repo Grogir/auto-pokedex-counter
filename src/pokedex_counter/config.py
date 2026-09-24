@@ -21,6 +21,8 @@ SPRITES_BG_DIR = RESOURCES_DIR / "sprites_background"
 FONTS_DIR = RESOURCES_DIR / "fonts"
 COMPARISON_DIR = RESOURCES_DIR / "comparison"
 WR_JSON_PATH = COMPARISON_DIR / "WR.json"
+ROUTE_DIR = RESOURCES_DIR / "route"
+ROUTE_PATH = ROUTE_DIR / "route.txt"
 
 # Where a completed run's per-section catch order is saved (see
 # services/pb_service.py). Unlike WR_JSON_PATH (a bundled read-only
@@ -51,5 +53,5 @@ MIN_SHADE_SEPARATION = 15.0
 # glyphs are not, so this margin matters most for ROI_TEXT.
 ROI_SEARCH_MARGIN = 4
 
-FRAME_SIZE = (960, 540)
+FRAME_SIZE_DETECTION = (960, 540)
 FRAME_SIZE_CALIBRATION = (1920, 1080)

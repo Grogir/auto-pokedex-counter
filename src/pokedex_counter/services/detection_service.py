@@ -4,7 +4,7 @@ import time
 import cv2
 from PySide6.QtCore import QObject, Signal
 
-from pokedex_counter.config import FRAME_SIZE, FRAME_SIZE_CALIBRATION, ROI_SEARCH_MARGIN, THRESHOLD
+from pokedex_counter.config import ROI_SEARCH_MARGIN, THRESHOLD
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
 
@@ -25,6 +25,7 @@ CHARSET = [
     "'","PK","MN", "-","'r","'m", "?", "!", ".", "_", "_", "_", "_", "_", " ", "♂",
     "₽", "×", ".", "/", ",", "♀", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 ]
+ROI_TEXTBOX = (0, 2/3, 1, 1/3)  # x, y, w, h in normalized coordinates
 
 try:
     from pokedex_counter.roi_calibration import ROI_FULL
@@ -81,11 +82,6 @@ class DetectionService(QObject):
     def set_section_provider(self, provider) -> None:
         self._section_provider = provider
 
-    def current_section(self) -> int:
-        """Public accessor for the currently active section (see
-        _active_section)."""
-        return self._active_section()
-
     def image_to_binary(self, image):
         value = 0
         for pixel in image.flat:
@@ -109,15 +105,17 @@ class DetectionService(QObject):
 
     def process_frame_textbox(self, frame):
         if not ROI_FULL: return
-        # section = self._active_section()
-        # x, y, w, h = [n * FRAME_SIZE[1] // FRAME_SIZE_CALIBRATION[1] for n in ROI_FULL]
         frame_h, frame_w = frame.shape[:2]
-        game_x = round(ROI_FULL[0] * frame_w)
-        game_y = round(ROI_FULL[1] * frame_h)
-        game_w = round(ROI_FULL[2] * frame_w)
-        game_h = round(ROI_FULL[3] * frame_h)
+        game_x = ROI_FULL[0] * frame_w
+        game_y = ROI_FULL[1] * frame_h
+        game_w = ROI_FULL[2] * frame_w
+        game_h = ROI_FULL[3] * frame_h
+        textbox_x = game_x + ROI_TEXTBOX[0] * game_w
+        textbox_y = game_y + ROI_TEXTBOX[1] * game_h
+        textbox_w = ROI_TEXTBOX[2] * game_w
+        textbox_h = ROI_TEXTBOX[3] * game_h
 
-        textbox = frame[game_y+round(game_h*2/3) : game_y+game_h, game_x : game_x+game_w]
+        textbox = frame[round(textbox_y):round(textbox_y + textbox_h), round(textbox_x):round(textbox_x + textbox_w)]
         # cv2.imwrite("textbox1.png", textbox)
         textbox = cv2.resize(textbox, (160, 48))
         # cv2.imwrite("textbox2.png", textbox)
