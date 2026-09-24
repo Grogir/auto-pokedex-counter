@@ -45,7 +45,7 @@ def test_set_calibrated_true_restores_the_current_count(main_window):
     controller.count_changed.connect(main_window._update_counter)
     main_window.set_count_provider(controller.current_count)
     main_window.set_calibrated(False)
-    for name in ("1", "2", "3"):
+    for name in ("BULBASAUR", "IVYSAUR", "VENUSAUR"):
         controller.on_detection(name)
 
     main_window.set_calibrated(True)

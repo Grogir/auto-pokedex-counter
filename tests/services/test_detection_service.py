@@ -18,27 +18,27 @@ DETECTION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "detection"
 # _prime_to_section below.
 SEC_HYPNO, SEC_CLEF, SEC_SLOWBRO = 11, 59, 86
 DETECTION_IMAGE_CASES = [
-    ("calibration_01.png", "catch", "catch_01.png", "97", SEC_HYPNO),
-    ("calibration_01.png", "evolve", "evolve_01.png", "80", SEC_SLOWBRO),
-    ("calibration_01.png", "text", "text_01.png", "35", SEC_CLEF),
-    ("calibration_02.png", "catch", "catch_02.png", "97", SEC_HYPNO),
-    ("calibration_02.png", "evolve", "evolve_02.png", "80", SEC_SLOWBRO),
-    ("calibration_02.png", "text", "text_02.png", "35", SEC_CLEF),
+    ("calibration_01.png", "catch", "catch_01.png", "HYPNO", SEC_HYPNO),
+    ("calibration_01.png", "evolve", "evolve_01.png", "SLOWBRO", SEC_SLOWBRO),
+    ("calibration_01.png", "text", "text_01.png", "CLEFAIRY", SEC_CLEF),
+    ("calibration_02.png", "catch", "catch_02.png", "HYPNO", SEC_HYPNO),
+    ("calibration_02.png", "evolve", "evolve_02.png", "SLOWBRO", SEC_SLOWBRO),
+    ("calibration_02.png", "text", "text_02.png", "CLEFAIRY", SEC_CLEF),
     # Real captures of the same screens under a different (non-default) GBC
     # hardware palette and under a fully inverted ("Negative"-style) one -
     # regression coverage for canonicalize_shades()/the ROI search margin.
-    ("calibration_01.png", "catch", "catch_01_palette.png", "97", SEC_HYPNO),
-    ("calibration_01.png", "catch", "catch_01_inverted.png", "97", SEC_HYPNO),
-    ("calibration_01.png", "evolve", "evolve_01_palette.png", "80", SEC_SLOWBRO),
-    ("calibration_01.png", "evolve", "evolve_01_inverted.png", "80", SEC_SLOWBRO),
-    ("calibration_01.png", "text", "text_01_palette.png", "35", SEC_CLEF),
-    ("calibration_01.png", "text", "text_01_inverted.png", "35", SEC_CLEF),
+    ("calibration_01.png", "catch", "catch_01_palette.png", "HYPNO", SEC_HYPNO),
+    ("calibration_01.png", "catch", "catch_01_inverted.png", "HYPNO", SEC_HYPNO),
+    ("calibration_01.png", "evolve", "evolve_01_palette.png", "SLOWBRO", SEC_SLOWBRO),
+    ("calibration_01.png", "evolve", "evolve_01_inverted.png", "SLOWBRO", SEC_SLOWBRO),
+    ("calibration_01.png", "text", "text_01_palette.png", "CLEFAIRY", SEC_CLEF),
+    ("calibration_01.png", "text", "text_01_inverted.png", "CLEFAIRY", SEC_CLEF),
 ]
 
 DETECTION_TEXTBOX_CASES = [
-    ("calibration_03.png", "textbox_catch_03.png", "105"),
-    ("calibration_03.png", "textbox_evolve_03.png", "55"),
-    ("calibration_03.png", "textbox_name_03.png", "133"),
+    ("calibration_03.png", "textbox_catch_03.png", "MAROWAK"),
+    ("calibration_03.png", "textbox_evolve_03.png", "GOLDUCK"),
+    ("calibration_03.png", "textbox_name_03.png", "EEVEE"),
 ]
 
 
@@ -129,7 +129,7 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     roi_templates = _roi_templates_for("calibration_01.png", sprite_templates, calibrated_rois)
 
     detector = _make_detector(roi_templates)
-    _prime_to_section(detector, 11)  # "97" lives in section 11
+    _prime_to_section(detector, SEC_HYPNO)
     detections = []
     detector.detection.connect(detections.append)
 
@@ -140,16 +140,16 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     # button yet) must only fire the signal once, not once per frame.
     for _ in range(5):
         detector.process_frame(flipped)
-    assert detections == ["97"]
+    assert detections == ["HYPNO"]
 
     # A frame with nothing recognizable must not re-trigger it either.
     detector.process_frame(np.zeros_like(flipped))
-    assert detections == ["97"]
+    assert detections == ["HYPNO"]
 
     # Only forgetting it (manual "unclick" in the UI) allows re-detection.
-    detector.forget("97")
+    detector.forget("HYPNO")
     detector.process_frame(flipped)
-    assert detections == ["97", "97"]
+    assert detections == ["HYPNO", "HYPNO"]
 
 
 def _pattern(seed, size=20):

@@ -21,27 +21,27 @@ except ImportError:
 # Dex numbers whose "obtained" event is only ever confirmed via a name-text
 # banner (trade evolutions etc.) rather than a sprite match against
 # ROI_CATCH/ROI_EVOLVE.
-TEXT_NAMES = {"33", "35", "63", "106", "127", "131", "133", "137", "138", "142", "147"}
+TEXT_NAMES = {"NIDORINO", "CLEFAIRY", "ABRA", "HITMONLEE", "PINSIR", "LAPRAS", "EEVEE", "PORYGON", "OMANYTE", "AERODACTYL", "DRATINI"}
 
 # Dex numbers that have an ROI_EVOLVE screen event (something evolves into
 # them). Used to sweep any evolution not explicitly routed into a section
 # below into the final section - see build_catch_sections().
 EVOLVE_NAMES = {
-    "3", "5", "6", "8", "9", "12", "14", "15", "18", "20", "24", "26", "28",
-    "30", "31", "34", "36", "38", "40", "42", "44", "45", "47", "49", "51",
-    "53", "55", "57", "59", "61", "62", "64", "67", "70", "71", "73", "75",
-    "78", "80", "85", "87", "89", "91", "93", "97", "99", "101", "103",
-    "105", "112", "117", "119", "121", "130", "134", "135", "136", "139",
-    "141", "148",
+    "VENUSAUR", "CHARMELEON", "CHARIZARD", "WARTORTLE", "BLASTOISE", "BUTTERFREE", "KAKUNA", "BEEDRILL", "PIDGEOT", "RATICATE", "ARBOK", "RAICHU", "SANDSLASH",
+    "NIDORINA", "NIDOQUEEN", "NIDOKING", "CLEFABLE", "NINETALES", "WIGGLYTUFF", "GOLBAT", "GLOOM", "VILEPLUME", "PARASECT", "VENOMOTH", "DUGTRIO",
+    "PERSIAN", "GOLDUCK", "PRIMEAPE", "ARCANINE", "POLIWHIRL", "POLIWRATH", "KADABRA", "MACHOKE", "WEEPINBELL", "VICTREEBEL", "TENTACRUEL", "GRAVELER",
+    "RAPIDASH", "SLOWBRO", "DODRIO", "DEWGONG", "MUK", "CLOYSTER", "HAUNTER", "HYPNO", "KINGLER", "ELECTRODE", "EXEGGUTOR",
+    "MAROWAK", "RHYDON", "SEADRA", "SEAKING", "STARMIE", "GYARADOS", "VAPOREON", "JOLTEON", "FLAREON", "OMASTAR",
+    "KABUTOPS", "DRAGONAIR",
 }
 
 
 # Within these sections, these dex numbers refer to their ROI_EVOLVE event
 # rather than the default CATCH/TEXT one.
 SECTION_EVOLVE_OVERRIDES: dict[int, set[str]] = {
-    7: {"30", "31", "47", "103"},  # section 8 (0-indexed 7)
-    10: {"148", "93", "24", "64", "34", "36", "47"},  # section 11 (0-indexed 10)
-    11: {"93", "24", "64", "34", "36", "47"},  # dedicated evolution section - same five, listed again here
+    7: {"NIDORINA", "NIDOQUEEN", "PARASECT", "EXEGGUTOR"},  # section 8 (0-indexed 7)
+    10: {"DRAGONAIR", "HAUNTER", "ARBOK", "KADABRA", "NIDOKING", "CLEFABLE", "PARASECT"},  # section 11 (0-indexed 10)
+    11: {"HAUNTER", "ARBOK", "KADABRA", "NIDOKING", "CLEFABLE", "PARASECT"},  # dedicated evolution section - same five, listed again here
 }
 
 # The dex number whose detection advances to the next section. The final
@@ -53,7 +53,7 @@ SECTION_EVOLVE_OVERRIDES: dict[int, set[str]] = {
 
 # The route file is the source of truth for the active section system. Keep
 # the legacy names below as compatibility data for the WR/evolution views.
-from pokedex_counter.game_config import ROUTE_SECTIONS, is_evolution
+from pokedex_counter.game_config import POKEMON_NAME_TO_DEX, ROUTE_SECTIONS, is_evolution
 
 CATCH_SECTIONS_RAW = [section.required + section.bonuses for section in ROUTE_SECTIONS]
 SECTION_TRIGGERS = [
@@ -80,8 +80,13 @@ def build_catch_sections() -> list[list[tuple[str, str]]]:
         for idx, names in enumerate(CATCH_SECTIONS_RAW)
     ]
     placed_evolves = {name for section in sections for name, rtype in section if rtype == "EVOLVE"}
-    # sections[-1] += [(name, "EVOLVE") for name in sorted(EVOLVE_NAMES - placed_evolves, key=int)]
-    sections += [[(name, "EVOLVE") for name in sorted(EVOLVE_NAMES - placed_evolves, key=int)]]
+    # sections[-1] += [(name, "EVOLVE") for name in sorted(
+    #     EVOLVE_NAMES - placed_evolves, key=POKEMON_NAMES.__getitem__
+    # )]
+    sections += [[
+        (name, "EVOLVE")
+        for name in sorted(EVOLVE_NAMES - placed_evolves, key=POKEMON_NAME_TO_DEX.__getitem__)
+    ]]
     return sections
 
 

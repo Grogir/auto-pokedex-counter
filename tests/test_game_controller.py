@@ -6,31 +6,31 @@ def test_duplicate_catches_are_logged_and_counted_once():
     findings = []
     controller.pokemon_found.connect(lambda *finding: findings.append(finding))
 
-    controller.on_detection("4")
-    controller.on_detection("4")
+    controller.on_detection("CHARMANDER")
+    controller.on_detection("CHARMANDER")
 
     assert controller.count == 1
-    assert controller.found == {"4"}
-    assert controller.section_catches == {0: ["4", "4"]}
-    assert [finding[0] for finding in findings] == ["4", "4"]
+    assert controller.found == {"CHARMANDER"}
+    assert controller.section_catches == {0: ["CHARMANDER", "CHARMANDER"]}
+    assert [finding[0] for finding in findings] == ["CHARMANDER", "CHARMANDER"]
 
 
 def test_section_is_derived_from_found_triggers():
     controller = GameController()
 
-    controller.on_detection("1")
-    controller.on_detection("16")
+    controller.on_detection("BULBASAUR")
+    controller.on_detection("PIDGEY")
 
     assert controller.current_section() == 2
-    assert [names for names in controller.section_catches.values()] == [["1"], ["16"]]
+    assert [names for names in controller.section_catches.values()] == [["BULBASAUR"], ["PIDGEY"]]
 
 
 def test_forgetting_a_pokemon_removes_all_duplicates():
     controller = GameController()
-    controller.on_detection("1")
-    controller.on_detection("1")
+    controller.on_detection("BULBASAUR")
+    controller.on_detection("BULBASAUR")
 
-    controller.forget("1")
+    controller.forget("BULBASAUR")
 
     assert controller.count == 0
     assert controller.found == set()
@@ -39,8 +39,8 @@ def test_forgetting_a_pokemon_removes_all_duplicates():
 
 def test_reset_clears_the_run_state():
     controller = GameController()
-    controller.on_detection("122")
-    controller.on_detection("1")
+    controller.on_detection("MR.MIME")
+    controller.on_detection("BULBASAUR")
 
     controller.reset()
 

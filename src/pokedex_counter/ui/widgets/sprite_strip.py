@@ -22,6 +22,7 @@ from pokedex_counter.config import (
 )
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 from pokedex_counter.ui.widgets.flow_layout import FlowLayout
+from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
@@ -73,7 +74,8 @@ class SpriteStrip(QWidget):
 
         for path in paths:
             label = self._make_sprite_label(path)
-            self._labels_by_name[path.stem] = label
+            name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
+            self._labels_by_name[name] = label
             self._layout.addWidget(label)
 
     @staticmethod
@@ -276,6 +278,7 @@ class SpriteStrip(QWidget):
         return self._layout.minimumSize()
 
     def _on_manual_click(self, path: Path) -> None:
+        name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
         label = self.sender()
 
         if isinstance(label, ClickableLabel):
@@ -284,11 +287,11 @@ class SpriteStrip(QWidget):
                     label._just_unignored = False
                     label.set_catch_color(LABEL_COLOR_CATCH)
                 else:
-                    label.set_catch_color(self._catch_color_for(path.stem))
-                self.sprite_selected.emit(path.stem)
+                    label.set_catch_color(self._catch_color_for(name))
+                self.sprite_selected.emit(name)
             else:
-                self._evolved_names.discard(path.stem)
-                self.sprite_deselected.emit(path.stem)
+                self._evolved_names.discard(name)
+                self.sprite_deselected.emit(name)
 
     def _on_ignored(self, path: Path, ignored: bool) -> None:
-        self.sprite_ignored.emit(path.stem, ignored)
+        self.sprite_ignored.emit(POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem), ignored)

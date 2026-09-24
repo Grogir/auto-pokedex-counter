@@ -7,6 +7,7 @@ from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
 from pokedex_counter.config import LABEL_COLOR_BOX_COUNT, SPRITES_DIR
+from pokedex_counter.game_config import POKEMON_NAME_TO_DEX, POKEMON_DEX_TO_NAME
 
 TEAM_SIZE = 6
 BOX_SIZE = 20
@@ -14,7 +15,7 @@ VISIBLE_BOXES = 7
 SPRITE_SIZE = 25
 
 # Only names in this set get a visible icon, so the window stays readable while still retaining the slot occupied by every Pokemon.
-DISPLAYED_POKEMON = frozenset({"102", "29", "30", "23", "46", "92", "35", "33", "63", "147", "88", "77", "60", "61", "133", "79", "133", "133", "52", "138", "13", "14", "2", "69", "70", "56", "7", "8", "25", "100", "43", "44", "39", "104", "118", "84", "116", "140", "19", "11", "111", "4", "5", "17", "72", "37", "48", "58", "27", "96", "50", "41", "66", "74", "120", "98", "54", "90", "129", "86"})
+DISPLAYED_POKEMON = frozenset({"EXEGGCUTE", "NIDORAN♀", "NIDORINA", "EKANS", "PARAS", "GASTLY", "CLEFAIRY", "NIDORINO", "ABRA", "DRATINI", "GRIMER", "PONYTA", "POLIWAG", "POLIWHIRL", "EEVEE", "SLOWPOKE", "EEVEE", "EEVEE", "MEOWTH", "OMANYTE", "WEEDLE", "KAKUNA", "IVYSAUR", "BELLSPROUT", "WEEPINBELL", "MANKEY", "SQUIRTLE", "WARTORTLE", "PIKACHU", "VOLTORB", "ODDISH", "GLOOM", "JIGGLYPUFF", "CUBONE", "GOLDEEN", "DODUO", "HORSEA", "KABUTO", "RATTATA", "METAPOD", "RHYHORN", "CHARMANDER", "CHARMELEON", "PIDGEOTTO", "TENTACOOL", "VULPIX", "VENONAT", "GROWLITHE", "SANDSHREW", "DROWZEE", "DIGLETT", "ZUBAT", "MACHOP", "GEODUDE", "STARYU", "KRABBY", "PSYDUCK", "SHELLDER", "MAGIKARP", "SEEL"})
 DISPLAY_ALL = False  # If True, all Pokemon will be displayed, not just those in DISPLAYED_POKEMON.
 
 class BoxesWindow(QWidget):
@@ -45,7 +46,7 @@ class BoxesWindow(QWidget):
         """Add a Pokemon to the team or boxes, if it is not already present. If it is an evolved form, replace the previous form in the team if present."""
         self._handle_special_cases_before(name)
         previous = self.previous_form(name)
-        if previous in DISPLAYED_POKEMON and previous != "133":
+        if previous in DISPLAYED_POKEMON and previous != "EEVEE":
             self._undisplayed_pokemon.add(previous)
 
         if evolved:
@@ -72,41 +73,41 @@ class BoxesWindow(QWidget):
 
     def previous_form(self, name: str) -> str | None:
         """Return the previous form of `name`, or None if it has no previous form."""
-        if name == "135" or name == "136":
-            return "133"
-        return str(int(name) - 1)
+        if name in ("JOLTEON", "FLAREON"):
+            return "EEVEE"
+        return POKEMON_DEX_TO_NAME.get(POKEMON_NAME_TO_DEX[name] - 1)
 
     def _handle_special_cases_before(self, name: str) -> None:
-        if self._current_box == 1 and name == "23":
-            self.deposit("1")
-            self.deposit("10")
-            self.deposit("51")
-        elif self._current_box == 1 and "115" in self.boxes[self._current_box] and name in ["86", "54", "98", "90", "120", "42", "55"]:
+        if self._current_box == 1 and name == "EKANS":
+            self.deposit("BULBASAUR")
+            self.deposit("CATERPIE")
+            self.deposit("DUGTRIO")
+        elif self._current_box == 1 and "KANGASKHAN" in self.boxes[self._current_box] and name in ["SEEL", "PSYDUCK", "KRABBY", "SHELLDER", "STARYU", "GOLBAT", "GOLDUCK"]:
             self.change_box(2)
-        elif self._current_box == 2 and "144" in self.boxes[self._current_box] and name in ["66", "74", "41", "95", "49", "75", "42", "67"]:
+        elif self._current_box == 2 and "ARTICUNO" in self.boxes[self._current_box] and name in ["MACHOP", "GEODUDE", "ZUBAT", "ONIX", "VENOMOTH", "GRAVELER", "GOLBAT", "MACHOKE"]:
             self.change_box(3)
-        elif self._current_box == 3 and name == "92":
-            self.deposit("32")
+        elif self._current_box == 3 and name == "GASTLY":
+            self.deposit("NIDORAN♂")
             self.change_box(4)
 
     def _handle_special_cases_after(self, name: str) -> None:
-        if self._current_box == 1 and name == "51":
-            self.deposit("1")
-            self.deposit("10")
-            self.deposit("51")
-        elif self._current_box == 1 and name == "23" and len(self.team) == 2:
+        if self._current_box == 1 and name == "DUGTRIO":
+            self.deposit("BULBASAUR")
+            self.deposit("CATERPIE")
+            self.deposit("DUGTRIO")
+        elif self._current_box == 1 and name == "EKANS" and len(self.team) == 2:
             self.team[0], self.team[1] = self.team[1], self.team[0]
-        elif self._current_box == 4 and name == "151":
+        elif self._current_box == 4 and name == "MEW":
             self.change_box(5)
-        elif self._current_box == 5 and name == "7":
-            self.deposit("16")
-            if "47" in self.boxes[1]: # only deposit paras if we have parasect
-                self.deposit("46")
-            self.deposit("47")
-            self.deposit("31")
-            self.deposit("103")
+        elif self._current_box == 5 and name == "SQUIRTLE":
+            self.deposit("PIDGEY")
+            if "PARASECT" in self.boxes[1]: # only deposit paras if we have parasect
+                self.deposit("PARAS")
+            self.deposit("PARASECT")
+            self.deposit("NIDOQUEEN")
+            self.deposit("EXEGGUTOR")
             self.change_box(6)
-        elif self._current_box == 6 and name == "138":
+        elif self._current_box == 6 and name == "OMANYTE":
             self.change_box(7)
 
     def change_box(self, box_number: int) -> None:
@@ -275,7 +276,7 @@ class BoxesWindow(QWidget):
         if not name:
             return
 
-        pixmap = QPixmap(str(self._sprites_dir / f"{name}.png"))
+        pixmap = QPixmap(str(self._sprites_dir / f"{POKEMON_NAME_TO_DEX[name]}.png"))
         if pixmap.isNull():
             return
         width = self._sprite_width

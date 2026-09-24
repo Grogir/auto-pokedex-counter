@@ -23,7 +23,7 @@ from pokedex_counter.roi_config import CATCH_SECTIONS
 from pokedex_counter.settings_window import SettingsWindow
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
-BONUSES = {"4"}
+BONUSES = {"CHARMANDER"}
 
 
 @pytest.fixture
@@ -78,7 +78,7 @@ def test_starts_off_when_the_setting_is_off(wired):
 
 # Raticate: catchable in the wild on this route, and also swept up as an
 # evolution at the end of the run - so it exercises both classifications.
-BOTH_WAYS = "20"
+BOTH_WAYS = "RATICATE"
 
 
 @pytest.fixture
@@ -132,7 +132,7 @@ def test_manual_bonus_click_color_follows_the_active_section(
     found_wiring, section_kind, expected_color, qtbot
 ):
     controller, strip, boxes = found_wiring
-    name = "47"
+    name = "PARASECT"
     caught_in, evolved_in = _sections_for(name)
     section = caught_in if section_kind == "caught" else evolved_in
 
@@ -157,7 +157,7 @@ def test_manual_sprite_click_reaches_boxes_but_unclick_does_not(qtbot):
     qtbot.addWidget(boxes)
     wire_found_pokemon(controller, strip, boxes)
     strip.sprite_selected.connect(controller.on_detection)
-    label = strip._labels_by_name["1"]
+    label = strip._labels_by_name["BULBASAUR"]
 
     label.show()
     qtbot.mouseClick(label, Qt.MouseButton.LeftButton)

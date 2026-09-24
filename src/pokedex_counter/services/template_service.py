@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from pokedex_counter.vision.image_io import load_gray
+from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
 
 class TemplateService:
     def __init__(self, folder: Path):
@@ -16,4 +17,4 @@ class TemplateService:
                 print(f"[TemplateService] WARNING: failed to load '{p.name}', skipping")
                 continue
 
-            self.templates[p.stem] = img
+            self.templates[POKEMON_DEX_TO_NAME.get(int(p.stem), p.stem)] = img

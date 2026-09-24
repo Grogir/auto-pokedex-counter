@@ -14,8 +14,8 @@ ROI_EVOLVE = (263, 55, 99, 99)
 ROI_TEXT = (335, 226, 111, 40)
 
 ROI_CONFIG = [
-    ["1", ROI_CATCH],
-    ["3", ROI_EVOLVE],
+    ["BULBASAUR", ROI_CATCH],
+    ["VENUSAUR", ROI_EVOLVE],
 ]
 '''
 
@@ -47,7 +47,7 @@ def test_preserves_rest_of_file(config_file):
     update_roi_constants(config_file, {"CATCH": (1, 2, 3, 4)})
 
     text = config_file.read_text()
-    assert 'ROI_CONFIG = [\n    ["1", ROI_CATCH],\n    ["3", ROI_EVOLVE],\n]' in text
+    assert 'ROI_CONFIG = [\n    ["BULBASAUR", ROI_CATCH],\n    ["VENUSAUR", ROI_EVOLVE],\n]' in text
 
 
 def test_partial_lock_only_updates_given_keys(config_file):

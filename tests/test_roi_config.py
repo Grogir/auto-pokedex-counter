@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pokedex_counter.roi_config as roi_config
 from pokedex_counter.config import SPRITES_BG_DIR
-from pokedex_counter.game_config import BONUSES
+from pokedex_counter.game_config import BONUSES, POKEMON_NAME_TO_DEX
 from pokedex_counter.roi_config import (
     CATCH_SECTIONS,
     SECTION_TRIGGERS,
@@ -90,10 +90,9 @@ def test_preserves_section_order_and_tags_each_entry_with_its_section():
     assert [(name, section_index) for name, _roi, _template, section_index in result] == expected
 
 
-def test_every_dex_number_has_at_least_one_detection_path():
+def test_every_pokemon_has_at_least_one_detection_path():
     covered = {name for section in CATCH_SECTIONS for name, _roi_label in section}
-    all_dex_numbers = {str(i) for i in range(1, 152)}
-    assert all_dex_numbers - covered == set()
+    assert set(POKEMON_NAME_TO_DEX) - covered == set()
 
 
 def test_section_triggers_are_members_of_their_own_section():
@@ -104,12 +103,12 @@ def test_section_triggers_are_members_of_their_own_section():
         assert trigger in names_in_section
 
 
-def test_bonuses_are_dex_numbers():
+def test_bonuses_are_pokemon_names():
     """BONUSES is hand-edited and only ever used for a lookup by sprite
     name, so a typo'd or non-dex entry would silently never highlight
     rather than fail loudly."""
-    assert all(name.isdigit() and 1 <= int(name) <= 151 for name in BONUSES), (
-        f"not dex numbers: {sorted(name for name in BONUSES if not name.isdigit() or not 1 <= int(name) <= 151)}"
+    assert all(name in POKEMON_NAME_TO_DEX for name in BONUSES), (
+        f"unknown Pokémon names: {sorted(set(BONUSES) - set(POKEMON_NAME_TO_DEX))}"
     )
 
 
@@ -127,8 +126,8 @@ def test_the_final_sweep_section_counts_as_evolutions():
     """build_catch_sections() rakes every unrouted evolution onto the end of
     the last section. That sweep is where most of the run's evolutions
     happen, so it's the case the bonus highlight most needs to exclude."""
-    assert is_evolution(len(CATCH_SECTIONS) - 1, "20")  # Raticate, swept
-    assert not is_evolution(5, "20")  # ...but a real catch back in section 6
+    assert is_evolution(len(CATCH_SECTIONS) - 1, "RATICATE")  # Raticate, swept
+    assert not is_evolution(5, "RATICATE")  # ...but a real catch back in section 6
 
 
 def test_a_catch_is_never_an_evolution():
@@ -141,8 +140,8 @@ def test_a_catch_is_never_an_evolution():
 def test_an_out_of_range_section_is_not_an_evolution():
     """Nothing should ever ask, but a section index that fell out of sync
     must degrade to "it was caught" rather than raise mid-run."""
-    assert not is_evolution(-1, "20")
-    assert not is_evolution(len(CATCH_SECTIONS), "20")
+    assert not is_evolution(-1, "RATICATE")
+    assert not is_evolution(len(CATCH_SECTIONS), "RATICATE")
 
 
 def test_every_entry_resolves_to_a_real_sprite_template():

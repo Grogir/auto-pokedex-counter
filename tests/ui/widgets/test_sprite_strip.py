@@ -62,7 +62,7 @@ def test_reset_on_already_empty_strip_is_a_noop(sprite_strip):
 
 
 def test_rectangular_dimensions_resize_sprite_labels(sprite_strip):
-    label = sprite_strip._labels_by_name["1"]
+    label = sprite_strip._labels_by_name["BULBASAUR"]
 
     sprite_strip.set_sprite_dimensions(40, 30)
 
@@ -73,7 +73,7 @@ def test_rectangular_dimensions_resize_sprite_labels(sprite_strip):
 
 
 def test_padding_expands_sprite_labels_without_changing_icon_canvas(sprite_strip):
-    label = sprite_strip._labels_by_name["1"]
+    label = sprite_strip._labels_by_name["BULBASAUR"]
     sprite_strip.set_sprite_dimensions(40, 30)
 
     sprite_strip.set_sprite_padding(5)
@@ -110,128 +110,128 @@ def test_reload_reuses_cached_pixmaps(qtbot, monkeypatch):
 # --- WR comparison colors ---
 
 def test_catch_is_black_when_no_feature_is_on(sprite_strip):
-    sprite_strip.select_sprite("1")
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH
+    sprite_strip.select_sprite("BULBASAUR")
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH
 
 
 def test_wr_route_sprite_is_blue_until_it_is_caught(sprite_strip):
-    sprite_strip.mark_wr_section({"1"})
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_WR_MARKED
+    sprite_strip.mark_wr_section({"BULBASAUR"})
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_WR_MARKED
 
-    sprite_strip.select_sprite("1")
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH
+    sprite_strip.select_sprite("BULBASAUR")
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH
 
 
 def test_off_route_catch_is_green_while_comparing_to_wr(sprite_strip):
-    sprite_strip.mark_wr_section({"1"})
+    sprite_strip.mark_wr_section({"BULBASAUR"})
 
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_OFF_ROUTE
 
 
 def test_returning_to_an_earlier_section_removes_future_wr_names(sprite_strip):
-    sprite_strip.set_wr_names({"1", "4"})
-    sprite_strip.set_wr_names({"1"})
+    sprite_strip.set_wr_names({"BULBASAUR", "CHARMANDER"})
+    sprite_strip.set_wr_names({"BULBASAUR"})
 
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_OFF_ROUTE
 
 
 def test_wr_route_remains_active_after_the_last_section(sprite_strip):
-    sprite_strip.set_wr_names({"1"})
+    sprite_strip.set_wr_names({"BULBASAUR"})
     sprite_strip.set_current_section(set(), set())
 
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_OFF_ROUTE
 
 
 # --- bonus highlighting ---
 
 def test_bonus_catch_is_red(sprite_strip):
-    sprite_strip.set_bonus_names({"4"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
 
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_bonus_is_not_highlighted_before_it_is_caught(sprite_strip):
     """Unlike a WR mark, a bonus is only a catch color - listing one must
     not pre-highlight it as something still to get."""
-    sprite_strip.set_bonus_names({"4"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
 
-    assert color_of(sprite_strip, "4") is None
+    assert color_of(sprite_strip, "CHARMANDER") is None
 
 
 def test_bonus_outranks_both_wr_catch_colors(sprite_strip):
-    sprite_strip.set_bonus_names({"1", "4"})
-    sprite_strip.mark_wr_section({"1"})  # 1 on route, 4 off it
+    sprite_strip.set_bonus_names({"BULBASAUR", "CHARMANDER"})
+    sprite_strip.mark_wr_section({"BULBASAUR"})  # 1 on route, 4 off it
 
-    sprite_strip.select_sprite("1")
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("BULBASAUR")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_BONUS
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_enabling_bonuses_recolors_catches_already_made(sprite_strip):
-    sprite_strip.select_sprite("4")
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
+    sprite_strip.select_sprite("CHARMANDER")
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
-    sprite_strip.set_bonus_names({"4"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_disabling_bonuses_puts_catches_back_to_their_wr_color(sprite_strip):
-    sprite_strip.mark_wr_section({"1"})
-    sprite_strip.set_bonus_names({"1", "4"})
-    sprite_strip.select_sprite("1")
-    sprite_strip.select_sprite("4")
+    sprite_strip.mark_wr_section({"BULBASAUR"})
+    sprite_strip.set_bonus_names({"BULBASAUR", "CHARMANDER"})
+    sprite_strip.select_sprite("BULBASAUR")
+    sprite_strip.select_sprite("CHARMANDER")
 
     sprite_strip.set_bonus_names(set())
 
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH  # on route
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE  # off route
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH  # on route
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_OFF_ROUTE  # off route
 
 
 def test_reaching_a_bonus_wr_section_does_not_clobber_its_red(sprite_strip):
     """mark_wr_section retroactively corrects a catch made before its
     section came up. That correction has to respect bonus highlighting
     instead of forcing the on-route black."""
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.mark_wr_section({"1"})
-    sprite_strip.select_sprite("4")  # caught early, off route so far
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.mark_wr_section({"BULBASAUR"})
+    sprite_strip.select_sprite("CHARMANDER")  # caught early, off route so far
 
-    sprite_strip.mark_wr_section({"4"})  # its section arrives: on route after all
+    sprite_strip.mark_wr_section({"CHARMANDER"})  # its section arrives: on route after all
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_bonus_names_missing_from_the_strip_are_ignored(sprite_strip):
     """BONUSES is hand-edited and doesn't have to line up with the sprite
     folder, so an unknown entry must not blow up."""
-    sprite_strip.set_bonus_names({"4", "not-a-sprite"})
+    sprite_strip.set_bonus_names({"CHARMANDER", "not-a-sprite"})
 
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_bonus_highlighting_survives_a_reset(sprite_strip):
     """reset() clears WR marks so a fresh run re-earns them section by
     section, but BONUSES is static - it stays on for the next run."""
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.select_sprite("4")
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.select_sprite("CHARMANDER")
 
     sprite_strip.reset()
-    assert color_of(sprite_strip, "4") is None
+    assert color_of(sprite_strip, "CHARMANDER") is None
 
-    sprite_strip.select_sprite("4")
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    sprite_strip.select_sprite("CHARMANDER")
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 # --- evolutions are not bonuses ---
@@ -239,52 +239,52 @@ def test_bonus_highlighting_survives_a_reset(sprite_strip):
 def test_evolving_into_a_bonus_is_not_highlighted(sprite_strip):
     """Every bonus is an evolved form, so obtaining one says nothing on its
     own - only catching it in the wild is the bonus."""
-    sprite_strip.set_bonus_names({"4"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
 
-    sprite_strip.select_sprite("4", evolved=True)
+    sprite_strip.select_sprite("CHARMANDER", evolved=True)
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
 
 def test_an_evolved_bonus_stays_black_when_highlighting_is_turned_on_later(sprite_strip):
     """set_bonus_names recolors past catches, so it has to remember which of
     them were evolutions rather than re-deciding from the name alone."""
-    sprite_strip.select_sprite("4", evolved=True)
+    sprite_strip.select_sprite("CHARMANDER", evolved=True)
 
-    sprite_strip.set_bonus_names({"4"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_CATCH
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
 
 def test_an_evolved_bonus_still_gets_its_wr_color(sprite_strip):
     """Suppressing the red must fall through to the normal catch colors, not
     force black."""
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.mark_wr_section({"1"})  # 4 is off route
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.mark_wr_section({"BULBASAUR"})  # 4 is off route
 
-    sprite_strip.select_sprite("4", evolved=True)
+    sprite_strip.select_sprite("CHARMANDER", evolved=True)
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_OFF_ROUTE
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_OFF_ROUTE
 
 
 def test_forgetting_an_evolved_sprite_lets_it_be_a_bonus_again(sprite_strip):
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.select_sprite("4", evolved=True)
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.select_sprite("CHARMANDER", evolved=True)
 
-    sprite_strip.deselect_sprite("4")
-    sprite_strip.select_sprite("4")
+    sprite_strip.deselect_sprite("CHARMANDER")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 def test_reset_forgets_that_a_bonus_was_evolved(sprite_strip):
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.select_sprite("4", evolved=True)
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.select_sprite("CHARMANDER", evolved=True)
 
     sprite_strip.reset()
-    sprite_strip.select_sprite("4")
+    sprite_strip.select_sprite("CHARMANDER")
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
 
 
 # --- hand-clicked catches ---
@@ -294,25 +294,25 @@ def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip, q
     nothing about WR or bonus state - so the strip fixes the color up
     afterwards. Without that, hand-marking a catch the detector missed
     would mis-color it."""
-    sprite_strip.set_bonus_names({"4"})
-    sprite_strip.mark_wr_section({"1"})
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    sprite_strip.mark_wr_section({"BULBASAUR"})
 
-    for name in ("1", "4", "7"):
+    for name in ("BULBASAUR", "CHARMANDER", "SQUIRTLE"):
         label = sprite_strip._labels_by_name[name]
         label.show()
         qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
-    assert color_of(sprite_strip, "4") == LABEL_COLOR_BONUS  # bonus
-    assert color_of(sprite_strip, "1") == LABEL_COLOR_CATCH  # on route
-    assert color_of(sprite_strip, "7") == LABEL_COLOR_OFF_ROUTE  # off route
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS  # bonus
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH  # on route
+    assert color_of(sprite_strip, "SQUIRTLE") == LABEL_COLOR_OFF_ROUTE  # off route
 
 
 def test_manual_unclick_clears_the_highlight_and_the_count(sprite_strip, qtbot):
-    sprite_strip.set_bonus_names({"4"})
-    label = sprite_strip._labels_by_name["4"]
+    sprite_strip.set_bonus_names({"CHARMANDER"})
+    label = sprite_strip._labels_by_name["CHARMANDER"]
 
     label.show()
     qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
     qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
-    assert color_of(sprite_strip, "4") is None
+    assert color_of(sprite_strip, "CHARMANDER") is None
