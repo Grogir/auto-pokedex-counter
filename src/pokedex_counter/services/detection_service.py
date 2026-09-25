@@ -1,15 +1,18 @@
 # vision/detector.py
-import time
-
 import cv2
 from PySide6.QtCore import QObject, Signal
 
-from pokedex_counter.config import ROI_SEARCH_MARGIN, THRESHOLD
+from pokedex_counter.config import (
+    GAMEBOY_SIZE,
+    ROI_SEARCH_MARGIN,
+    ROI_TEXTBOX,
+    THRESHOLD,
+)
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
 
 from pokedex_counter.config import RESOURCES_DIR
-from pokedex_counter.game_config import POKEMON_NAME_TO_DEX, POKEMON_DEX_TO_NAME
+from pokedex_counter.game_config import POKEMON_NAME_TO_DEX
 TEXTBOX_FILE_TOP = "top.png"
 TEXTBOX_FILE_BOTTOM = "bottom.png"
 CHARSET_FILE = "charset.png"
@@ -23,12 +26,12 @@ CHARSET = [
     "'","PK","MN", "-","'r","'m", "?", "!", ".", "_", "_", "_", "_", "_", " ", "♂",
     "₽", "×", ".", "/", ",", "♀", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 ]
-ROI_TEXTBOX = (0, 2/3, 1, 1/3)  # x, y, w, h in normalized coordinates
+
 
 try:
-    from pokedex_counter.roi_calibration import ROI_FULL
+    from pokedex_counter.roi_calibration import GAME_AREA
 except ImportError:
-    ROI_FULL = None
+    GAME_AREA = None
 
 class DetectionService(QObject):
     detection = Signal(str)
@@ -40,11 +43,12 @@ class DetectionService(QObject):
         self._detected: set[str] = set()
         self._last_detected = None
         self._section_provider = section_provider
+        self._game_area = GAME_AREA
 
         self._textbox_top = load_gray(RESOURCES_DIR / "textbox" / TEXTBOX_FILE_TOP)
         self._textbox_bottom = load_gray(RESOURCES_DIR / "textbox" / TEXTBOX_FILE_BOTTOM)
         self._text = ""
-        self._charset_templates = self.load_charset()
+        self._charset_templates = self._load_charset()
 
         # roi -> [(name, resized_template, canonical_template, section_index), ...],
         # grouped so each distinct screen region is cropped/converted only
@@ -56,21 +60,22 @@ class DetectionService(QObject):
         self.update_rois(roi_templates)
 
     def update_rois(self, roi_templates) -> None:
-        """Rebuild the ROI/template grouping in place (e.g. after
-        recalibration). Deliberately leaves `_detected` untouched - progress
-        made so far in the current run must survive a recalibration."""
+        """Rebuild the ROI/template grouping in place"""
         group_by_roi = {}
         roi_groups = []
         for name, roi, template, section_index in roi_templates:
-            resized = cv2.resize(template, (roi[2], roi[3]))
-            canonical = canonicalize_shades(resized)
+            canonical = canonicalize_shades(template)
             group = group_by_roi.get(roi)
             if group is None:
                 group = []
                 group_by_roi[roi] = group
                 roi_groups.append((roi, group))
-            group.append((name, resized, canonical, section_index))
+            group.append((name, template, canonical, section_index))
         self._roi_groups = roi_groups
+
+    def update_game_area(self, area) -> None:
+        """Move all prepared templates to a newly calibrated game area."""
+        self._game_area = area
 
     def _active_section(self) -> int:
         if self._section_provider is None:
@@ -80,13 +85,13 @@ class DetectionService(QObject):
     def set_section_provider(self, provider) -> None:
         self._section_provider = provider
 
-    def image_to_binary(self, image):
+    def _image_to_binary(self, image):
         value = 0
         for pixel in image.flat:
             value = (value << 1) | (int(pixel) & 1)
         return value
 
-    def load_charset(self):
+    def _load_charset(self):
         charset_templates = {}
         charset_img = load_gray(RESOURCES_DIR / "textbox" / CHARSET_FILE)
         h = charset_img.shape[0] // 8
@@ -96,26 +101,27 @@ class DetectionService(QObject):
                 tile_x = (idx % w) * 8
                 tile_y = (idx // w) * 8
                 character = charset_img[tile_y:tile_y+8, tile_x:tile_x+8]
-                binary = self.image_to_binary(character)
+                binary = self._image_to_binary(character)
                 # cv2.imwrite("test.png", character)
                 charset_templates[binary] = CHARSET[idx]
         return charset_templates
 
     def process_frame_textbox(self, frame):
-        if not ROI_FULL: return
+        if self._game_area is None:
+            return
         frame_h, frame_w = frame.shape[:2]
-        game_x = ROI_FULL[0] * frame_w
-        game_y = ROI_FULL[1] * frame_h
-        game_w = ROI_FULL[2] * frame_w
-        game_h = ROI_FULL[3] * frame_h
-        textbox_x = game_x + ROI_TEXTBOX[0] * game_w
-        textbox_y = game_y + ROI_TEXTBOX[1] * game_h
-        textbox_w = ROI_TEXTBOX[2] * game_w
-        textbox_h = ROI_TEXTBOX[3] * game_h
+        game_x = self._game_area[0] * frame_w
+        game_y = self._game_area[1] * frame_h
+        game_w = self._game_area[2] * frame_w
+        game_h = self._game_area[3] * frame_h
+        textbox_x = game_x + game_w * ROI_TEXTBOX[0] / GAMEBOY_SIZE[0]
+        textbox_y = game_y + game_h * ROI_TEXTBOX[1] / GAMEBOY_SIZE[1]
+        textbox_w = game_w * ROI_TEXTBOX[2] / GAMEBOY_SIZE[0]
+        textbox_h = game_h * ROI_TEXTBOX[3] / GAMEBOY_SIZE[1]
 
         textbox = frame[round(textbox_y):round(textbox_y + textbox_h), round(textbox_x):round(textbox_x + textbox_w)]
         # cv2.imwrite("textbox1.png", textbox)
-        textbox = cv2.resize(textbox, (160, 48))
+        textbox = cv2.resize(textbox, (ROI_TEXTBOX[2], ROI_TEXTBOX[3]))
         # cv2.imwrite("textbox2.png", textbox)
         textbox = cv2.cvtColor(textbox, cv2.COLOR_BGR2GRAY)
         # cv2.imwrite("textbox3.png", textbox)
@@ -134,7 +140,7 @@ class DetectionService(QObject):
             log += f" textbox_score={score}"
 
         def find_character(char):
-            binary = self.image_to_binary(char)
+            binary = self._image_to_binary(char)
             best = self._charset_templates.get(binary)
             if best:
                 return best, 0
@@ -174,9 +180,17 @@ class DetectionService(QObject):
                 self._last_detected = mon
                 print(f"Detected {mon}")
 
-    def process_frame(self, frame):
-        frame = cv2.flip(frame, 1)
-        # frame = cv2.resize(frame, FRAME_SIZE)
+    def process_frame_image(self, frame):
+        if self._game_area is None:
+            return
+
+        frame_h, frame_w = frame.shape[:2]
+        game_x = self._game_area[0] * frame_w
+        game_y = self._game_area[1] * frame_h
+        game_w = self._game_area[2] * frame_w
+        game_h = self._game_area[3] * frame_h
+        game = frame[round(game_y):round(game_y + game_h), round(game_x):round(game_x + game_w)]
+        game = cv2.resize(game, GAMEBOY_SIZE)
 
         section = self._active_section()
 
@@ -197,12 +211,11 @@ class DetectionService(QObject):
                 continue
 
             x, y, w, h = roi
-            frame_h, frame_w = frame.shape[:2]
             x0 = max(0, x - ROI_SEARCH_MARGIN)
             y0 = max(0, y - ROI_SEARCH_MARGIN)
-            x1 = min(frame_w, x + w + ROI_SEARCH_MARGIN)
-            y1 = min(frame_h, y + h + ROI_SEARCH_MARGIN)
-            crop = frame[y0:y1, x0:x1]
+            x1 = min(GAMEBOY_SIZE[0], x + w + ROI_SEARCH_MARGIN)
+            y1 = min(GAMEBOY_SIZE[1], y + h + ROI_SEARCH_MARGIN)
+            crop = game[y0:y1, x0:x1]
 
             if crop.size == 0:
                 continue
@@ -224,6 +237,12 @@ class DetectionService(QObject):
                         max_val = max(max_val, cv2.minMaxLoc(result_ci)[1])
 
                 if max_val > best_value:
+                    # cv2.imwrite("_frame.png", frame)
+                    # cv2.imwrite("_game.png", game)
+                    # cv2.imwrite("crop_1gray.png", crop_gray)
+                    # if crop_canonical is not None: cv2.imwrite("crop_2canonical.png", crop_canonical)
+                    # cv2.imwrite("template_1gray.png", template)
+                    # if canonical is not None: cv2.imwrite("template_2canonical.png", canonical)
                     best_value = max_val
                     best_name = name
 

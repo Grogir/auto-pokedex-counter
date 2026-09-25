@@ -16,7 +16,7 @@ Alakazam
 Kangaskhan
 Magneton
 Seel Psyduck Magikarp Shellder Krabby Staryu - Golbat Golduck Kingler Dewgong
-Articuno
+Articuno - Golbat Golduck Kingler Dewgong
 min:3 Machop Geodude Onix Zubat - Venomoth Graveler Golbat Machoke Marowak
 Machamp - Venomoth Graveler Golbat Machoke Marowak
 Machop Geodude Onix Zubat

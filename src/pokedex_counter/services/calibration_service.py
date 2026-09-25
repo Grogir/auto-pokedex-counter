@@ -42,8 +42,8 @@ class CalibrationService:
 
     def run(self, templates: dict[str, np.ndarray], timeout: float | None = None) -> dict[str, tuple[int, int, int, int]]:
         """
-        templates: mapping of ROI name ("CATCH"/"EVOLVE"/"TEXT") -> grayscale reference image.
-        Returns mapping of ROI name -> locked (x, y, w, h) for whichever templates
+        templates: mapping of ROI name (currently only "GAME_AREA") -> grayscale reference image.
+        Returns mapping of ROI name -> locked normalized (x, y, w, h) for whichever templates
         stayed confident, at/above min_roi_size, AND at the same position for
         `confirm_delay` seconds.
         """
@@ -77,7 +77,6 @@ class CalibrationService:
                 if not ret:
                     continue
 
-                # frame = cv2.flip(frame, 1)
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                 display = frame.copy()

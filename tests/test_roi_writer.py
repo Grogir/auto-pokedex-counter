@@ -1,7 +1,4 @@
-"""Locks in the behaviour run_calibration() relies on: writing freshly
-calibrated ROIs back into roi_config.py's ROI_CATCH/ROI_EVOLVE/ROI_TEXT
-constants in place, atomically, without disturbing the rest of the file.
-"""
+"""Locks in atomic persistence of the calibrated full-game ROI."""
 
 from pathlib import Path
 
@@ -9,13 +6,10 @@ import pytest
 
 from pokedex_counter.roi_writer import update_roi_constants
 
-ORIGINAL = '''ROI_CATCH = (348, 41, 99, 99)
-ROI_EVOLVE = (263, 55, 99, 99)
-ROI_TEXT = (335, 226, 111, 40)
+ORIGINAL = '''GAME_AREA = (348, 41, 99, 99)
 
 ROI_CONFIG = [
-    ["BULBASAUR", ROI_CATCH],
-    ["VENUSAUR", ROI_EVOLVE],
+    ["BULBASAUR", GAME_AREA],
 ]
 '''
 
@@ -27,50 +21,32 @@ def config_file(tmp_path):
     return path
 
 
-def test_updates_all_locked_constants(config_file):
-    locked = {
-        "CATCH": (383, 35, 127, 127),
-        "EVOLVE": (275, 54, 126, 126),
-        "TEXT": (367, 273, 140, 50),
-    }
+def test_updates_full_constant(config_file):
+    locked = {"GAME_AREA": (383, 35, 127, 127)}
 
     updated = update_roi_constants(config_file, locked)
 
-    assert set(updated) == {"ROI_CATCH", "ROI_EVOLVE", "ROI_TEXT"}
+    assert updated == ["GAME_AREA"]
     text = config_file.read_text()
-    assert "ROI_CATCH = (383, 35, 127, 127)" in text
-    assert "ROI_EVOLVE = (275, 54, 126, 126)" in text
-    assert "ROI_TEXT = (367, 273, 140, 50)" in text
+    assert "GAME_AREA = (383, 35, 127, 127)" in text
 
 
 def test_preserves_rest_of_file(config_file):
-    update_roi_constants(config_file, {"CATCH": (1, 2, 3, 4)})
+    update_roi_constants(config_file, {"GAME_AREA": (1, 2, 3, 4)})
 
     text = config_file.read_text()
-    assert 'ROI_CONFIG = [\n    ["BULBASAUR", ROI_CATCH],\n    ["VENUSAUR", ROI_EVOLVE],\n]' in text
-
-
-def test_partial_lock_only_updates_given_keys(config_file):
-    updated = update_roi_constants(config_file, {"EVOLVE": (9, 9, 9, 9)})
-
-    assert updated == ["ROI_EVOLVE"]
-    text = config_file.read_text()
-    assert "ROI_EVOLVE = (9, 9, 9, 9)" in text
-    assert "ROI_CATCH = (348, 41, 99, 99)" in text  # untouched
-    assert "ROI_TEXT = (335, 226, 111, 40)" in text  # untouched
+    assert 'ROI_CONFIG = [\n    ["BULBASAUR", GAME_AREA],\n]' in text
 
 
 def test_replaces_none_placeholder_on_first_calibration(tmp_path):
     path = tmp_path / "roi_calibration.py"
-    path.write_text("ROI_CATCH = None\nROI_EVOLVE = None\nROI_TEXT = None\n")
+    path.write_text("GAME_AREA = None\n")
 
-    updated = update_roi_constants(path, {"CATCH": (1, 2, 3, 4)})
+    updated = update_roi_constants(path, {"GAME_AREA": (1, 2, 3, 4)})
 
-    assert updated == ["ROI_CATCH"]
+    assert updated == ["GAME_AREA"]
     text = path.read_text()
-    assert "ROI_CATCH = (1, 2, 3, 4)" in text
-    assert "ROI_EVOLVE = None" in text  # untouched
-    assert "ROI_TEXT = None" in text  # untouched
+    assert "GAME_AREA = (1, 2, 3, 4)" in text
 
 
 def test_unknown_constant_name_is_skipped_not_crashed(config_file):
@@ -82,12 +58,12 @@ def test_unknown_constant_name_is_skipped_not_crashed(config_file):
 
 def test_missing_constant_in_file_warns_and_skips(tmp_path, capsys):
     path = tmp_path / "roi_config.py"
-    path.write_text("ROI_CATCH = (1, 1, 1, 1)\n")
+    path.write_text("ROI_OTHER = (1, 1, 1, 1)\n")
 
-    updated = update_roi_constants(path, {"EVOLVE": (9, 9, 9, 9)})
+    updated = update_roi_constants(path, {"GAME_AREA": (9, 9, 9, 9)})
 
     assert updated == []
-    assert path.read_text() == "ROI_CATCH = (1, 1, 1, 1)\n"
+    assert path.read_text() == "ROI_OTHER = (1, 1, 1, 1)\n"
     assert "could not find" in capsys.readouterr().out
 
 

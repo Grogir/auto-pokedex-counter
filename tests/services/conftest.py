@@ -11,9 +11,7 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "calibration"
 CALIBRATION_DIR = RESOURCES_DIR / "calibration"
 
 CALIBRATION_FILENAMES = {
-    "catch": "catch.png",
-    "evolve": "evolve.png",
-    "text": "text.png",
+    "GAME_AREA": "full5.png",
 }
 
 FIXTURE_FILENAMES = ["calibration_01.png", "calibration_02.png"]
@@ -31,8 +29,14 @@ def calibration_templates():
 def calibrated_rois(calibration_templates):
     return {
         fixture_name: {
-            label: find_best_match(load_gray(FIXTURES_DIR / fixture_name), template, DEFAULT_SCALES)[1]
+            label: _normalized_box(load_gray(FIXTURES_DIR / fixture_name), template)
             for label, template in calibration_templates.items()
         }
         for fixture_name in FIXTURE_FILENAMES
     }
+
+
+def _normalized_box(frame, template):
+    box = find_best_match(frame, template, DEFAULT_SCALES)[1]
+    height, width = frame.shape[:2]
+    return (box[0] / width, box[1] / height, box[2] / width, box[3] / height)

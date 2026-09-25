@@ -53,10 +53,9 @@ def main() -> int:
                     break
     # score, box = find_best_match(frame_gray, template, [])
     print(f"Best match score: {best_score}, box: {best_box}")
-    import pokedex_counter.services.detection_service
     frame_h, frame_w = frame.shape[:2]
-    pokedex_counter.services.detection_service.ROI_FULL = (best_box[0] / frame_w, best_box[1] / frame_h, best_box[2] / frame_w, best_box[3] / frame_h)
     detector = DetectionService([])
+    detector.update_game_area((best_box[0] / frame_w, best_box[1] / frame_h, best_box[2] / frame_w, best_box[3] / frame_h))
 
     app = QApplication([])
     controller = GameController()

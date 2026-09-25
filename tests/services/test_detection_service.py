@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from pokedex_counter.config import FRAME_SIZE_DETECTION, SPRITES_BG_DIR, THRESHOLD
+from pokedex_counter.config import FRAME_SIZE_DETECTION, GAMEBOY_SIZE, SPRITES_BG_DIR, THRESHOLD
 from pokedex_counter.roi_config import SECTION_TRIGGERS, build_detection_entries
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.template_service import TemplateService
@@ -49,12 +49,13 @@ def sprite_templates():
 
 def _roi_templates_for(calibration_fixture, sprite_templates, calibrated_rois):
     rois = calibrated_rois[calibration_fixture]
-    locked = {"CATCH": rois["catch"], "EVOLVE": rois["evolve"], "TEXT": rois["text"]}
+    locked = {"GAME_AREA": rois["GAME_AREA"]}
     return build_detection_entries(sprite_templates, locked)
 
 
-def _make_detector(roi_templates):
+def _make_detector(roi_templates, game_area=(0, 0, GAMEBOY_SIZE[0] / FRAME_SIZE_DETECTION[0], GAMEBOY_SIZE[1] / FRAME_SIZE_DETECTION[1])):
     detector = DetectionService(roi_templates)
+    detector.update_game_area(game_area)
     detector.set_section_provider(
         lambda: next(
             (section for section, trigger in enumerate(SECTION_TRIGGERS)
@@ -86,14 +87,14 @@ def test_calibrated_roi_detects_expected_pokemon(
 ):
     roi_templates = _roi_templates_for(calibration_fixture, sprite_templates, calibrated_rois)
 
-    detector = _make_detector(roi_templates)
+    detector = _make_detector(roi_templates, calibrated_rois[calibration_fixture]["GAME_AREA"])
     _prime_to_section(detector, expected_section)
     detections = []
     detector.detection.connect(detections.append)
 
     frame = load_color(DETECTION_FIXTURES_DIR / detection_fixture)
     assert frame is not None, f"Could not load image: {detection_fixture}"
-    detector.process_frame(cv2.flip(frame, 1))
+    detector.process_frame_image(frame)
 
     assert detections == [expected_name], (
         f"{calibration_fixture} -> {detection_fixture} ({label}): "
@@ -113,12 +114,11 @@ def test_textbox_frames_detect_expected_pokemon(calibration_fixture, detection_f
     CALIBRATION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "calibration"
     from pokedex_counter.vision.template_matching import find_best_match
     from pokedex_counter.config import RESOURCES_DIR
-    import pokedex_counter.services.detection_service
     calibration = load_gray(CALIBRATION_FIXTURES_DIR / calibration_fixture)
     template = load_gray(RESOURCES_DIR / "calibration" / "full5.png")
     _, box = find_best_match(calibration, template, [])
     cal_h, cal_w = calibration.shape[:2]
-    pokedex_counter.services.detection_service.ROI_FULL = (box[0] / cal_w, box[1] / cal_h, box[2] / cal_w, box[3] / cal_h)
+    detector.update_game_area((box[0] / cal_w, box[1] / cal_h, box[2] / cal_w, box[3] / cal_h))
 
     detector.process_frame_textbox(frame)
 
@@ -128,27 +128,26 @@ def test_textbox_frames_detect_expected_pokemon(calibration_fixture, detection_f
 def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, calibrated_rois):
     roi_templates = _roi_templates_for("calibration_01.png", sprite_templates, calibrated_rois)
 
-    detector = _make_detector(roi_templates)
+    detector = _make_detector(roi_templates, calibrated_rois["calibration_01.png"]["GAME_AREA"])
     _prime_to_section(detector, SEC_HYPNO)
     detections = []
     detector.detection.connect(detections.append)
 
     frame = load_color(DETECTION_FIXTURES_DIR / "catch_01.png")
-    flipped = cv2.flip(frame, 1)
 
     # Same screen held across many frames (e.g. player hasn't pressed a
     # button yet) must only fire the signal once, not once per frame.
     for _ in range(5):
-        detector.process_frame(flipped)
+        detector.process_frame_image(frame)
     assert detections == ["HYPNO"]
 
     # A frame with nothing recognizable must not re-trigger it either.
-    detector.process_frame(np.zeros_like(flipped))
+    detector.process_frame_image(np.zeros_like(frame))
     assert detections == ["HYPNO"]
 
     # Only forgetting it (manual "unclick" in the UI) allows re-detection.
     detector.forget("HYPNO")
-    detector.process_frame(flipped)
+    detector.process_frame_image(frame)
     assert detections == ["HYPNO", "HYPNO"]
 
 
@@ -157,15 +156,13 @@ def _pattern(seed, size=20):
 
 
 def _frame_with_pattern_at(roi, pattern):
-    """Build a frame containing `pattern` exactly at `roi`. The result is
-    pre-flipped so passing it to process_frame (which flips once) lands
-    the pattern at `roi` in the coordinates DetectionService crops from."""
+    """Build a frame containing `pattern` exactly at `roi`."""
     width, height = FRAME_SIZE_DETECTION
     frame = np.full((height, width, 3), 127, dtype=np.uint8)
     x, y, w, h = roi
     for channel in range(3):
         frame[y:y + h, x:x + w, channel] = pattern
-    return cv2.flip(frame, 1)
+    return frame
 
 
 def test_entries_outside_active_section_are_excluded_until_trigger_fires():
@@ -182,15 +179,15 @@ def test_entries_outside_active_section_are_excluded_until_trigger_fires():
 
     # Fresh detector starts on section 0; "B" belongs to section 1 and must
     # not be considered at all, even though it's a perfect pixel match.
-    detector.process_frame(frame_b)
+    detector.process_frame_image(frame_b)
     assert detections == []
 
     # Detecting "A" (section 0's trigger) advances to section 1, so the
     # same frame is now detected as "B".
-    detector.process_frame(_frame_with_pattern_at(roi, _pattern(1)))
+    detector.process_frame_image(_frame_with_pattern_at(roi, _pattern(1)))
     assert detections == [name_a]
 
-    detector.process_frame(frame_b)
+    detector.process_frame_image(frame_b)
     assert detections == [name_a, name_b]
 
 
@@ -207,8 +204,8 @@ def test_forgetting_the_trigger_rolls_back_the_active_section():
     frame_a = _frame_with_pattern_at(roi, _pattern(1))
     frame_b = _frame_with_pattern_at(roi, _pattern(2))
 
-    detector.process_frame(frame_a)
-    detector.process_frame(frame_b)
+    detector.process_frame_image(frame_a)
+    detector.process_frame_image(frame_b)
     assert detections == [name_a, name_b]
 
     # Undo both (e.g. the player manually un-clicks a misdetection). "A"
@@ -216,7 +213,7 @@ def test_forgetting_the_trigger_rolls_back_the_active_section():
     # matched again even though its template is still a perfect fit.
     detector.forget(name_a)
     detector.forget(name_b)
-    detector.process_frame(frame_b)
+    detector.process_frame_image(frame_b)
     assert detections == [name_a, name_b]
 
 
@@ -241,7 +238,7 @@ def test_update_rois_new_templates_are_matched_immediately():
     detector.detection.connect(detections.append)
 
     detector.update_rois([("B", roi, _pattern(2), 0)])
-    detector.process_frame(_frame_with_pattern_at(roi, _pattern(2)))
+    detector.process_frame_image(_frame_with_pattern_at(roi, _pattern(2)))
 
     assert detections == ["B"]
 
@@ -281,7 +278,7 @@ def test_negative_style_palette_still_detects_via_canonicalization():
     detections = []
     detector.detection.connect(detections.append)
 
-    detector.process_frame(_frame_with_pattern_at(roi, live_crop))
+    detector.process_frame_image(_frame_with_pattern_at(roi, live_crop))
 
     assert detections == [name]
 
@@ -304,7 +301,7 @@ def test_low_contrast_palette_still_detects_via_canonicalization():
     detections = []
     detector.detection.connect(detections.append)
 
-    detector.process_frame(_frame_with_pattern_at(roi, live_crop))
+    detector.process_frame_image(_frame_with_pattern_at(roi, live_crop))
 
     assert detections == [name]
 
@@ -321,6 +318,6 @@ def test_flat_crop_does_not_spuriously_match_via_canonicalization():
     detections = []
     detector.detection.connect(detections.append)
 
-    detector.process_frame(_frame_with_pattern_at(roi, flat_crop))
+    detector.process_frame_image(_frame_with_pattern_at(roi, flat_crop))
 
     assert detections == []

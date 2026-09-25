@@ -160,7 +160,7 @@ def run() -> int:
 
     # --- WIRING (VERY IMPORTANT) ---
 
-    capture.frame_ready.connect(detector.process_frame_textbox, Qt.ConnectionType.DirectConnection)
+    capture.frame_ready.connect(detector.process_frame_image, Qt.ConnectionType.DirectConnection)
     detector.detection.connect(controller.on_detection)
     wire_found_pokemon(controller, window.sprite_strip, boxes_window)
     window.sprite_strip.sprite_selected.connect(controller.on_detection)
@@ -223,12 +223,11 @@ def run() -> int:
         nonlocal capture
         capture.stop()
         locked = run_calibration(camera_index=camera_index)
-        if locked:
-            new_roi_templates = build_detection_entries(templates, locked)
-            detector.update_rois(new_roi_templates)
-            window.set_calibrated(bool(new_roi_templates))
+        if locked.get("GAME_AREA") is not None:
+            detector.update_game_area(locked["GAME_AREA"])
+            window.set_calibrated(True)
         capture = CaptureService(source=camera_index)
-        capture.frame_ready.connect(detector.process_frame_textbox, Qt.ConnectionType.DirectConnection)
+        capture.frame_ready.connect(detector.process_frame_image, Qt.ConnectionType.DirectConnection)
         capture.start()
 
     settings.calibrate_button.clicked.connect(on_calibrate_clicked)

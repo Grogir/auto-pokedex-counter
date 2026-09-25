@@ -3,15 +3,13 @@ import os
 import re
 from pathlib import Path
 
-_CONST_NAMES = {"CATCH": "ROI_CATCH", "EVOLVE": "ROI_EVOLVE", "TEXT": "ROI_TEXT", "FULL": "ROI_FULL"}
-
 
 def update_roi_constants(config_path: Path, locked: dict[str, tuple[int, int, int, int]]) -> list[str]:
     text = config_path.read_text()
     updated = []
 
     for key, box in locked.items():
-        const_name = _CONST_NAMES.get(key)
+        const_name = key
         if const_name is None:
             continue
 

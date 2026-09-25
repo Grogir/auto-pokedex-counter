@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Pokédex Counter"
-APP_VERSION = "0.4.0"
+APP_VERSION = "2.0"
 ORGANIZATION_NAME = APP_NAME
 
 # When frozen by PyInstaller, data files added via --add-data are extracted
@@ -16,8 +16,8 @@ else:
 
 # Directory containing sprite images shown in the main window.
 RESOURCES_DIR = _PACKAGE_DIR / "resources"
-SPRITES_DIR = RESOURCES_DIR / "sprites"
-SPRITES_BG_DIR = RESOURCES_DIR / "sprites_background"
+SPRITES_DIR = RESOURCES_DIR / "sprites_2"
+SPRITES_BG_DIR = RESOURCES_DIR / "detection"
 FONTS_DIR = RESOURCES_DIR / "fonts"
 COMPARISON_DIR = RESOURCES_DIR / "comparison"
 WR_JSON_PATH = COMPARISON_DIR / "WR.json"
@@ -36,12 +36,10 @@ if getattr(sys, "frozen", False):
 else:
     PB_JSON_PATH = COMPARISON_DIR / "PB.json"
 
-THRESHOLD = 0.85
-
 # Label background colors.
 LABEL_COLOR_CATCH = "black"
-LABEL_COLOR_WR_MARKED = "limegreen"
-LABEL_COLOR_OFF_ROUTE = "greenyellow"
+LABEL_COLOR_WR_MARKED = "yellow"
+LABEL_COLOR_OFF_ROUTE = "green"
 LABEL_COLOR_BONUS = "red"
 LABEL_COLOR_IGNORED = "gray"
 LABEL_COLOR_REQUIRED = "dodgerblue"
@@ -60,8 +58,15 @@ MIN_SHADE_SEPARATION = 15.0
 # assuming the calibrated position is exactly right. Different capture
 # sessions (even against the same physical setup) can drift by a pixel or
 # two - sprite icons are blocky enough to tolerate that, but fine text
-# glyphs are not, so this margin matters most for ROI_TEXT.
-ROI_SEARCH_MARGIN = 4
+# glyphs are not, so this margin matters most for text screens.
+ROI_SEARCH_MARGIN = 2
 
+THRESHOLD = 0.85
+
+GAMEBOY_SIZE = (160, 144)
 FRAME_SIZE_DETECTION = (960, 540)
+ROI_TEXTBOX = (0, 96, 160, 48)
+ROI_IMG_CATCH = (8, 8, 56, 56)
+ROI_IMG_EVOLVE = (56, 16, 56, 56)
+ROI_IMG_TEXT = (9, 113, 62, 22)
 FRAME_SIZE_CALIBRATION = (1920, 1080)

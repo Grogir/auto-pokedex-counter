@@ -34,9 +34,7 @@ def test_ensure_seeded_creates_file_with_none_placeholders(tmp_path):
     calibration_runner._ensure_seeded(config_path)
 
     text = config_path.read_text()
-    assert "ROI_CATCH = None" in text
-    assert "ROI_EVOLVE = None" in text
-    assert "ROI_TEXT = None" in text
+    assert text == "GAME_AREA = None\n"
 
 
 def test_ensure_seeded_leaves_existing_file_untouched(tmp_path):
@@ -67,7 +65,7 @@ def _fake_calibration_service(locked):
 
 def test_run_calibration_returns_locked_rois_even_if_persistence_fails(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        calibration_runner, "CalibrationService", _fake_calibration_service({"CATCH": (1, 2, 3, 4)})
+        calibration_runner, "CalibrationService", _fake_calibration_service({"GAME_AREA": (1, 2, 3, 4)})
     )
     # Parent directory doesn't exist, so writing here always fails — proves
     # a persistence failure doesn't stop the locked ROIs being returned for
@@ -77,21 +75,21 @@ def test_run_calibration_returns_locked_rois_even_if_persistence_fails(monkeypat
 
     locked = calibration_runner.run_calibration()
 
-    assert locked == {"CATCH": (1, 2, 3, 4)}
+    assert locked == {"GAME_AREA": (1, 2, 3, 4)}
     assert not unwritable.exists()
 
 
 def test_run_calibration_persists_when_writable(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        calibration_runner, "CalibrationService", _fake_calibration_service({"CATCH": (9, 9, 9, 9)})
+        calibration_runner, "CalibrationService", _fake_calibration_service({"GAME_AREA": (9, 9, 9, 9)})
     )
     config_path = tmp_path / "roi_calibration.py"
     monkeypatch.setattr(calibration_runner, "_writable_roi_calibration_path", lambda: config_path)
 
     locked = calibration_runner.run_calibration()
 
-    assert locked == {"CATCH": (9, 9, 9, 9)}
-    assert "ROI_CATCH = (9, 9, 9, 9)" in config_path.read_text()
+    assert locked == {"GAME_AREA": (9, 9, 9, 9)}
+    assert "GAME_AREA = (9, 9, 9, 9)" in config_path.read_text()
 
 
 def test_run_calibration_returns_empty_dict_when_nothing_locked(monkeypatch):

@@ -118,7 +118,7 @@ src/pokedex_counter/
   calibration_runner.py       Runs calibration on startup, persists locked ROIs
   camera.py                   Finds the OBS Virtual Camera's device index
   roi_config.py               Catch route, bonus list, detection entry building
-  roi_calibration.py          ROI_CATCH/EVOLVE/TEXT for this machine (gitignored)
+  roi_calibration.py          GAME_AREA for this machine (gitignored)
   roi_writer.py               Rewrites roi_calibration.py's ROI_* constants on disk
   config.py                   App-wide constants, resource paths
   main_window.py              Counter window UI (sprite grid + counter)

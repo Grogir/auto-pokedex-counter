@@ -6,7 +6,6 @@ from contextlib import redirect_stdout
 
 import cv2
 
-from pokedex_counter.roi_calibration import ROI_FULL
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.vision.image_io import load_color
 

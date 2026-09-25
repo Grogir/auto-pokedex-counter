@@ -8,18 +8,14 @@ from pokedex_counter.roi_writer import update_roi_constants
 from pokedex_counter.services.calibration_service import CalibrationService
 from pokedex_counter.vision.image_io import load_color
 
-# _FILENAMES = {"CATCH": "catch.png", "EVOLVE": "evolve.png", "TEXT": "text.png"}
-_FILENAMES = {"FULL": "full5.png"}
+_FILENAMES = {"GAME_AREA": "full5.png"}
 
 # None means "not calibrated yet" - roi_config.py skips any entry whose
 # type has no locked position, and app.py shows a calibration prompt
 # instead of running detection until at least one is locked. This seed
 # only needs to exist so roi_writer's regex has `NAME = ...` lines to find
 # and replace on the first-ever calibration; the file is otherwise blank.
-_SEED_TEMPLATE = """ROI_CATCH = None
-ROI_EVOLVE = None
-ROI_TEXT = None
-ROI_FULL = None
+_SEED_TEMPLATE = """GAME_AREA = None
 """
 
 
@@ -27,8 +23,8 @@ def _writable_roi_calibration_path() -> Path:
     """Where calibration persists locked ROIs for next launch.
 
     Source/dev runs write straight into the package's roi_calibration.py
-    (the gitignored file `roi_config.py` imports ROI_CATCH/EVOLVE/TEXT
-    from). A frozen exe has no such writable file — its modules are baked
+    (the gitignored file `roi_config.py` imports GAME_AREA from). A frozen exe
+    has no such writable file — its modules are baked
     into the bundle — so it gets its own roi_calibration.py next to the
     executable instead. Either way, run_calibration() also returns the
     locked ROIs so the current run doesn't depend on this write (or a
@@ -66,7 +62,7 @@ def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
     locked = CalibrationService(camera_index=camera_index).run(templates)  # no timeout: waits as long as needed
 
     if not locked:
-        print("[Calibration] Nothing locked, using existing ROI_* values.")
+        print("[Calibration] Nothing locked, using the existing GAME_AREA value.")
         return {}
 
     config_path = _writable_roi_calibration_path()
