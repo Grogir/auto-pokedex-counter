@@ -84,8 +84,7 @@ class MainWindow(QMainWindow):
 
     def set_calibrated(self, calibrated: bool) -> None:
         """Toggle between the normal "N caught" counter and a prompt to
-        calibrate - detection can't run at all until at least one ROI is
-        locked (see roi_config.build_detection_entries), so showing "0
+        calibrate - detection can't run without calibration, so showing "0
         caught" in that state would misleadingly suggest it's working."""
         self._calibrated = calibrated
         self.counter_label.setWordWrap(not calibrated)

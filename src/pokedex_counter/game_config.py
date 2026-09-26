@@ -54,15 +54,22 @@ def is_evolution(section_index: int, name: str) -> bool:
         )
     )
 
+def _final_section_mons() -> set[str]:
+    """Return the set of Pokémon names that are in the last route section."""
+    mons = set(POKEMON_NAME_TO_DEX.keys())
+    for section in ROUTE_SECTIONS:
+        mons -= set(section.required)
+    return mons
+
+FINAL_SECTION = _final_section_mons()
+
 # Dex numbers that count as a "bonus" catch. Purely cosmetic: with the
 # "Highlight bonuses" setting on, catching one of these lights it up red
-# instead of the usual black. Detection and routing ignore this entirely,
-# so a number listed here doesn't have to appear in CATCH_SECTIONS_RAW.
-#
+# instead of the usual black. Detection and routing ignore this entirely.
 # Every one of these is an evolved form, so "obtained" alone doesn't make it
 # a bonus - only actually catching it in the wild does, since evolving into
 # it is the routine path the highlight exists to stand out from. See
-# GameController.is_evolution() uses the route metadata to tell the two apart.
+# is_evolution() uses the route metadata to tell the two apart.
 BONUSES: set[str] = {
     "RATICATE", "RAICHU", "SANDSLASH", "WIGGLYTUFF", "GOLBAT", "PARASECT",
     "VENOMOTH", "GOLDUCK", "KADABRA", "MACHOKE", "GRAVELER", "DODRIO", "DEWGONG", "MUK",

@@ -19,7 +19,7 @@ from pokedex_counter.app import (
 from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import LABEL_COLOR_BONUS, LABEL_COLOR_CATCH, SPRITES_DIR
 from pokedex_counter.controllers.game_controller import GameController
-from pokedex_counter.roi_config import CATCH_SECTIONS
+from pokedex_counter.game_config import FINAL_SECTION, ROUTE_SECTIONS
 from pokedex_counter.settings_window import SettingsWindow
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
@@ -95,8 +95,15 @@ def found_wiring(qtbot):
 def _sections_for(name: str) -> tuple[int, int]:
     """(a section where `name` is caught, one where it's evolved into), read
     out of the real route so these stay honest if it gets re-authored."""
-    caught = next(i for i, s in enumerate(CATCH_SECTIONS) if (name, "CATCH") in s)
-    evolved = next(i for i, s in enumerate(CATCH_SECTIONS) if (name, "EVOLVE") in s)
+    caught = next(
+        i for i, s in enumerate(ROUTE_SECTIONS)
+        if name in s.required or name in s.bonuses
+    )
+    evolved = next(
+        (i for i, s in enumerate(ROUTE_SECTIONS) if name in s.evolutions),
+        len(ROUTE_SECTIONS) if name in FINAL_SECTION else None,
+    )
+    assert evolved is not None
     return caught, evolved
 
 

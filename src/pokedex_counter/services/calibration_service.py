@@ -3,7 +3,7 @@ import time
 import cv2
 import numpy as np
 
-from pokedex_counter.config import FRAME_SIZE_CALIBRATION
+from pokedex_counter.detection_config import FRAME_SIZE_CALIBRATION
 from pokedex_counter.vision.template_matching import find_best_match
 
 DEFAULT_SCALES = np.linspace(0.1, 5.0, 500)

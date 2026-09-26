@@ -1,6 +1,6 @@
 import cv2
 from PySide6.QtCore import QThread, Signal
-from pokedex_counter.config import FRAME_SIZE_DETECTION
+from pokedex_counter.detection_config import FRAME_SIZE_DETECTION
 
 class CaptureService(QThread):
     frame_ready = Signal(object)

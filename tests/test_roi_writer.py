@@ -75,6 +75,6 @@ def test_empty_locked_dict_leaves_file_untouched(config_file):
 
 
 def test_no_leftover_tmp_file(config_file):
-    update_roi_constants(config_file, {"CATCH": (1, 2, 3, 4)})
+    update_roi_constants(config_file, {"GAME_AREA": (1, 2, 3, 4)})
 
     assert not config_file.with_suffix(".py.tmp").exists()

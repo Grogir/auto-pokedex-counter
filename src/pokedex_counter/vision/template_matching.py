@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from pokedex_counter.config import MIN_SHADE_SEPARATION
+from pokedex_counter.detection_config import MIN_SHADE_SEPARATION
 
 _COARSE_SAMPLES = 40
 _MIN_FRAME_HEIGHT_RATIO = 0.1

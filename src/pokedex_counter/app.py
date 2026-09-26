@@ -8,7 +8,7 @@ from PySide6.QtCore import (
 
 from pokedex_counter.calibration_runner import run_calibration
 from pokedex_counter.camera import resolve_camera_index
-from pokedex_counter.config import APP_NAME, ORGANIZATION_NAME, SPRITES_BG_DIR
+from pokedex_counter.config import APP_NAME, ORGANIZATION_NAME, DETECTION_IMAGE_DIR
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.main_window import MainWindow
@@ -60,7 +60,7 @@ def run() -> int:
 
     camera_index = resolve_camera_index()
 
-    from pokedex_counter.roi_config import build_detection_entries, is_calibrated
+    from pokedex_counter.detection_config import is_calibrated
 
     app = QApplication([])
 
@@ -68,10 +68,8 @@ def run() -> int:
     controller = GameController()
 
     # --- vision ---
-    templates = TemplateService(Path(SPRITES_BG_DIR)).templates
-    roi_templates = build_detection_entries(templates)  # defaults; no boot-time calibration
-
-    detector = DetectionService(roi_templates)
+    detector = DetectionService()
+    detector.build_roi_groups(TemplateService(Path(DETECTION_IMAGE_DIR)).templates)
     detector.set_section_provider(controller.current_section)
 
     capture = CaptureService(source=camera_index)
