@@ -21,8 +21,8 @@ min:3 Machop Geodude Onix Zubat - Venomoth Graveler Golbat Machoke Marowak
 Machamp - Venomoth Graveler Golbat Machoke Marowak
 Machop Geodude Onix Zubat
 Scyther
-Moltres - Sandshrew Drowzee Spearow
 Koffing - Sandshrew Drowzee Spearow
+Moltres - Sandshrew Drowzee Spearow
 Diglett - Sandshrew Drowzee Spearow
 Sandshrew Drowzee Hitmonchan Venonat Growlithe - Spearow
 Gastly
@@ -57,11 +57,11 @@ Farfetch'd - Pikachu Magnemite Raichu
 Pikachu Magnemite
 Hitmonlee
 Squirtle
-Clefairy - Dratini
-Nidorino
+Clefairy - Dratini Nidorino Abra
+Nidorino - Abra
 Abra
 Dratini
-Porygon
+Porygon - Pinsir
 Pinsir
 Mankey - Bellsprout
 Bellsprout

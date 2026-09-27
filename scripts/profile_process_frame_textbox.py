@@ -1,14 +1,11 @@
-from pathlib import Path
 import cProfile
 import io
 import pstats
 from contextlib import redirect_stdout
-
-import cv2
+from pathlib import Path
 
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.vision.image_io import load_color
-
 
 FIXTURE_NOTEXT = Path(__file__).parent.parent / "tests" / "fixtures" / "calibration" / "calibration_03.png"
 FIXTURE = Path(__file__).parent.parent / "tests" / "fixtures" / "detection" / "text_03.png"

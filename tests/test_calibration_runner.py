@@ -46,53 +46,43 @@ def test_ensure_seeded_leaves_existing_file_untouched(tmp_path):
     assert config_path.read_text() == "# custom content\n"
 
 
-class _FakeCalibrationService:
-    def __init__(self, camera_index):
-        self.camera_index = camera_index
-
-    def run(self, templates):
-        return self._locked
-
-
-def _fake_calibration_service(locked):
-    def factory(camera_index):
-        svc = _FakeCalibrationService(camera_index)
-        svc._locked = locked
-        return svc
-
-    return factory
-
-
-def test_run_calibration_returns_locked_rois_even_if_persistence_fails(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        calibration_runner, "CalibrationService", _fake_calibration_service({"GAME_AREA": (1, 2, 3, 4)})
-    )
+def test_persist_calibration_results_handles_persistence_failure(monkeypatch, tmp_path):
     # Parent directory doesn't exist, so writing here always fails — proves
     # a persistence failure doesn't stop the locked ROIs being returned for
     # in-memory use this session.
     unwritable = tmp_path / "does" / "not" / "exist" / "roi_calibration.py"
     monkeypatch.setattr(calibration_runner, "_writable_roi_calibration_path", lambda: unwritable)
 
-    locked = calibration_runner.run_calibration()
+    calibration_runner.save_calibration_results({"GAME_AREA": (1, 2, 3, 4)})
 
-    assert locked == {"GAME_AREA": (1, 2, 3, 4)}
     assert not unwritable.exists()
 
 
-def test_run_calibration_persists_when_writable(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        calibration_runner, "CalibrationService", _fake_calibration_service({"GAME_AREA": (9, 9, 9, 9)})
-    )
+def test_persist_calibration_results_when_writable(monkeypatch, tmp_path):
     config_path = tmp_path / "roi_calibration.py"
     monkeypatch.setattr(calibration_runner, "_writable_roi_calibration_path", lambda: config_path)
 
-    locked = calibration_runner.run_calibration()
-
-    assert locked == {"GAME_AREA": (9, 9, 9, 9)}
+    calibration_runner.save_calibration_results({"GAME_AREA": (9, 9, 9, 9)})
     assert "GAME_AREA = (9, 9, 9, 9)" in config_path.read_text()
 
 
-def test_run_calibration_returns_empty_dict_when_nothing_locked(monkeypatch):
-    monkeypatch.setattr(calibration_runner, "CalibrationService", _fake_calibration_service({}))
+def test_run_calibration_starts_service_with_loaded_templates(monkeypatch):
+    class FakeCalibrationService:
+        def __init__(self):
+            self.templates = None
 
-    assert calibration_runner.run_calibration() == {}
+        def start(self, templates):
+            self.templates = templates
+
+    service = FakeCalibrationService()
+    monkeypatch.setattr(calibration_runner, "CALIBRATION_FILENAMES", {})
+
+    calibration_runner.run_calibration(service)
+
+    assert service.templates == {}
+
+
+def test_persist_calibration_results_does_nothing_when_no_rois_locked(monkeypatch):
+    monkeypatch.setattr(calibration_runner, "CALIBRATION_FILENAMES", {})
+
+    calibration_runner.save_calibration_results({})

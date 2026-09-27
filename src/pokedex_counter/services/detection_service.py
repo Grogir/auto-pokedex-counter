@@ -1,6 +1,5 @@
-# vision/detector.py
 import cv2
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 
 from pokedex_counter.detection_config import (
     CHARSET,
@@ -12,13 +11,16 @@ from pokedex_counter.detection_config import (
     ROI_SEARCH_MARGIN,
     ROI_TEXTBOX,
     TEXTBOX_BOTTOM_FILE_PATH,
-    TEXTBOX_TOP_FILE_PATH
+    TEXTBOX_TOP_FILE_PATH,
+)
+from pokedex_counter.game_config import (
+    FINAL_SECTION,
+    POKEMON_NAME_TO_DEX,
+    ROUTE_SECTIONS,
+    is_evolution,
 )
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
-
-from pokedex_counter.game_config import FINAL_SECTION, POKEMON_NAME_TO_DEX, ROUTE_SECTIONS, is_evolution
-
 
 try:
     from pokedex_counter.roi_calibration import GAME_AREA
@@ -64,7 +66,7 @@ class DetectionService(QObject):
         charset_img = load_gray(CHARSET_FILE_PATH)
         h = charset_img.shape[0] // 8
         w = charset_img.shape[1] // 8
-        for idx in range(0, w * h):
+        for idx in range(w * h):
             if CHARSET[idx] != "_":
                 tile_x = (idx % w) * 8
                 tile_y = (idx // w) * 8
@@ -74,9 +76,11 @@ class DetectionService(QObject):
                 charset_templates[binary] = CHARSET[idx]
         return charset_templates
 
+    @Slot(object)
     def process_frame_textbox(self, frame):
         if self._game_area is None:
             return
+
         frame_h, frame_w = frame.shape[:2]
         game_x = self._game_area[0] * frame_w
         game_y = self._game_area[1] * frame_h
@@ -163,6 +167,7 @@ class DetectionService(QObject):
         roi_groups.append(section_group(len(ROUTE_SECTIONS), FINAL_SECTION))
         self._roi_groups = roi_groups
 
+    @Slot(object)
     def process_frame_image(self, frame):
         if self._game_area is None:
             return

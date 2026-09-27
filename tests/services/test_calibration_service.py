@@ -1,15 +1,49 @@
+import numpy as np
 import pytest
 
+from pokedex_counter.detection_config import (
+    FRAME_SIZE_CALIBRATION,
+)
 from pokedex_counter.services.calibration_service import (
     DEFAULT_LOCK_THRESHOLD,
     DEFAULT_MIN_ROI_SIZE,
-    DEFAULT_SCALES,
+    CalibrationService,
     _meets_min_size,
 )
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import find_best_match
 
 from .conftest import CALIBRATION_FILENAMES, FIXTURE_FILENAMES, FIXTURES_DIR
+
+
+def test_start_connects_frame_handler_and_changes_resolution_from_frame(monkeypatch):
+    class FakeCaptureService:
+        def __init__(self):
+            self.calls = []
+
+        def change_resolution(self, resolution):
+            self.calls.append(resolution)
+            return resolution
+
+        class Signal:
+            def connect(self, slot, connection_type):
+                self.slot = slot
+
+            def disconnect(self, slot):
+                assert slot is self.slot
+
+    capture = FakeCaptureService()
+    capture.frame_ready = capture.Signal()
+    monkeypatch.setattr(
+        "pokedex_counter.services.calibration_service.cv2.destroyAllWindows",
+        lambda: None,
+    )
+
+    service = CalibrationService(capture)
+    service.start({"TEST": np.zeros((1, 1), dtype=np.uint8)})
+    service.process_frame(np.zeros((2, 2, 3), dtype=np.uint8))
+
+    assert capture.calls == [FRAME_SIZE_CALIBRATION]
 
 CASES = [
     (fixture_name, label)
@@ -23,7 +57,7 @@ def test_calibrated_roi_is_reasonable(calibration_templates, fixture_name, label
     fixture_gray = load_gray(FIXTURES_DIR / fixture_name)
     template = calibration_templates[label]
 
-    best_val, best_box = find_best_match(fixture_gray, template, DEFAULT_SCALES)
+    best_val, best_box = find_best_match(fixture_gray, template)
 
     assert best_box is not None, f"{fixture_name}: no match found at any scale"
 

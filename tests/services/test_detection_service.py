@@ -3,30 +3,36 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pokedex_counter.config import DETECTION_IMAGE_DIR
+from pokedex_counter.config import (
+    CALIBRATION_DIR,
+    CALIBRATION_FILENAMES,
+    DETECTION_IMAGE_DIR,
+)
 from pokedex_counter.detection_config import (
     FRAME_SIZE_DETECTION,
-    GAMEBOY_SIZE,
 )
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.template_service import TemplateService
 from pokedex_counter.vision.image_io import load_color, load_gray
+from tests.conftest import sections_for
 
 DETECTION_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "detection"
-SEC_HYPNO, SEC_CLEF, SEC_SLOWBRO = 11, 59, 86
+SEC_HYPNO = sections_for("HYPNO")[0]
+SEC_SLOWBRO = sections_for("SLOWBRO")[1]
+SEC_CLEFAIRY = sections_for("CLEFAIRY")[2]
 DETECTION_IMAGE_CASES = [
     ("calibration_01.png", "catch_01.png", "HYPNO", SEC_HYPNO),
     ("calibration_01.png", "evolve_01.png", "SLOWBRO", SEC_SLOWBRO),
-    ("calibration_01.png", "text_01.png", "CLEFAIRY", SEC_CLEF),
+    ("calibration_01.png", "text_01.png", "CLEFAIRY", SEC_CLEFAIRY),
     ("calibration_02.png", "catch_02.png", "HYPNO", SEC_HYPNO),
     ("calibration_02.png", "evolve_02.png", "SLOWBRO", SEC_SLOWBRO),
-    ("calibration_02.png", "text_02.png", "CLEFAIRY", SEC_CLEF),
+    ("calibration_02.png", "text_02.png", "CLEFAIRY", SEC_CLEFAIRY),
     ("calibration_01.png", "catch_01_palette.png", "HYPNO", SEC_HYPNO),
     ("calibration_01.png", "catch_01_inverted.png", "HYPNO", SEC_HYPNO),
     ("calibration_01.png", "evolve_01_palette.png", "SLOWBRO", SEC_SLOWBRO),
     ("calibration_01.png", "evolve_01_inverted.png", "SLOWBRO", SEC_SLOWBRO),
-    ("calibration_01.png", "text_01_palette.png", "CLEFAIRY", SEC_CLEF),
-    ("calibration_01.png", "text_01_inverted.png", "CLEFAIRY", SEC_CLEF),
+    ("calibration_01.png", "text_01_palette.png", "CLEFAIRY", SEC_CLEFAIRY),
+    ("calibration_01.png", "text_01_inverted.png", "CLEFAIRY", SEC_CLEFAIRY),
 ]
 DETECTION_TEXTBOX_CASES = [
     ("calibration_03.png", "textbox_catch_03.png", "MAROWAK"),
@@ -37,7 +43,7 @@ DETECTION_TEXTBOX_CASES = [
 
 @pytest.fixture(scope="module")
 def sprite_templates():
-    return TemplateService(Path(DETECTION_IMAGE_DIR)).templates
+    return TemplateService(DETECTION_IMAGE_DIR).templates
 
 
 def _make_detector(game_area):
@@ -100,10 +106,10 @@ def test_textbox_frames_detect_expected_pokemon(
     assert frame is not None
     calibration_dir = Path(__file__).parent.parent / "fixtures" / "calibration"
     calibration = load_gray(calibration_dir / calibration_fixture)
-    template = load_gray(Path("src/pokedex_counter/resources/calibration/full5.png"))
+    template = load_gray(CALIBRATION_DIR / CALIBRATION_FILENAMES["GAME_AREA"])
     from pokedex_counter.vision.template_matching import find_best_match
 
-    _, box = find_best_match(calibration, template, [])
+    _, box = find_best_match(calibration, template)
     height, width = calibration.shape[:2]
     detector.update_game_area(
         (box[0] / width, box[1] / height, box[2] / width, box[3] / height)

@@ -4,10 +4,9 @@ import pytest
 
 from pokedex_counter.config import (
     LABEL_COLOR_BONUS,
-    LABEL_COLOR_CATCH,
-    LABEL_COLOR_REQUIRED,
-    LABEL_COLOR_SECTION_BONUS,
-    LABEL_COLOR_WR_MARKED,
+    LABEL_COLOR_SECTION_REQUIRED,
+    LABEL_COLOR_WR_AND_PLAYER,
+    LABEL_COLOR_WR_ONLY,
 )
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 
@@ -20,75 +19,54 @@ def label(qtbot):
 
 
 def test_select_then_deselect_round_trip(label):
-    assert not label._selected
+    assert not label._caught
 
-    label.select()
-    assert label._selected
+    label.set_caught(True)
+    assert label._caught
 
-    label.deselect()
-    assert not label._selected
-
-
-def test_deselect_is_a_noop_when_not_selected(label, qtbot):
-    with qtbot.assertNotEmitted(label.clicked):
-        label.deselect()
-
-    assert not label._selected
+    label.set_caught(False)
+    assert not label._caught
 
 
-def test_deselect_does_not_emit_clicked(label, qtbot):
-    label.select()
-
-    with qtbot.assertNotEmitted(label.clicked):
-        label.deselect()
-
-
-def test_wr_mark_shows_blue_while_uncaught(label):
-    label.set_wr_marked(True)
-
-    assert f"background-color: {LABEL_COLOR_WR_MARKED};" in label.styleSheet()
+def test_wr_mark_shows_while_uncaught(label):
+    label.set_wr(True)
+    assert f"background-color: {LABEL_COLOR_WR_ONLY};" in label.styleSheet()
 
 
 def test_required_section_color_wins_over_wr_mark(label):
-    label.set_wr_marked(True)
-    label.set_section_color(LABEL_COLOR_REQUIRED)
-
-    assert f"background-color: {LABEL_COLOR_REQUIRED};" in label.styleSheet()
+    label.set_wr(True)
+    label.set_section_state(required=True, bonus=False)
+    assert f"background-color: {LABEL_COLOR_SECTION_REQUIRED};" in label.styleSheet()
 
 
 def test_non_required_section_color_does_not_win_over_wr_mark(label):
-    label.set_wr_marked(True)
-    label.set_section_color(LABEL_COLOR_SECTION_BONUS)
+    label.set_wr(True)
+    label.set_section_state(required=False, bonus=True)
 
-    assert f"background-color: {LABEL_COLOR_WR_MARKED};" in label.styleSheet()
+    assert f"background-color: {LABEL_COLOR_WR_ONLY};" in label.styleSheet()
 
 
-def test_catch_color_wins_over_the_wr_mark(label):
-    """_apply_style favors the catch color over the WR mark, which is what
-    lets SpriteStrip skip a separate unmark step when a marked sprite is
-    caught - and what lets a bonus red show through on a WR-route sprite."""
-    label.set_wr_marked(True)
+def test_catch_color_with_wr_mark(label):
+    """Bonus state wins over WR state once the sprite is caught."""
+    label.set_wr(True)
+    label.set_bonus(True)
+    label.set_caught(True)
+    assert f"background-color: {LABEL_COLOR_WR_AND_PLAYER};" in label.styleSheet()
 
-    label.select(LABEL_COLOR_BONUS)
 
+def test_bonus_mark_is_inert_until_the_label_is_caught(label):
+    label._apply_style()
+    assert "background-color: transparent;" in label.styleSheet()
+
+    label.set_bonus(True)
+    assert "background-color: transparent;" in label.styleSheet()
+
+    label.set_caught(True)
     assert f"background-color: {LABEL_COLOR_BONUS};" in label.styleSheet()
 
 
-def test_set_catch_color_is_inert_on_an_uncaught_label(label):
-    """SpriteStrip.set_bonus_names pushes a color at every label, caught or
-    not. On an uncaught one that must neither repaint it nor survive into
-    the next catch - select() always states the color it wants, so callers
-    can't rely on a color pushed ahead of time."""
-    label.set_catch_color(LABEL_COLOR_BONUS)
-    assert "background-color" not in label.styleSheet()
-
-    label.select()
-
-    assert "background-color: black;" in label.styleSheet()
-
-
 def test_deselect_drops_a_previous_catch_color(label):
-    label.select(LABEL_COLOR_BONUS)
-    label.deselect()
-
-    assert "background-color" not in label.styleSheet()
+    label.set_bonus(True)
+    label.set_caught(True)
+    label.set_caught(False)
+    assert "background-color: transparent;" in label.styleSheet()

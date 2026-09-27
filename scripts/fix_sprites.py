@@ -1,13 +1,14 @@
 from pathlib import Path
+
 import cv2
 
 from pokedex_counter.vision.image_io import load_color
 
 ROOT = Path(__file__).resolve().parent.parent
-# PATH = ROOT / "src" / "pokedex_counter" / "resources" / "sprites_background"
+# PATH = ROOT / "src" / "pokedex_counter" / "resources"
 PATH = ROOT / "tests" / "fixtures" / "detection"
-input_folder = Path(PATH)
-output_folder = Path(PATH / "out")
+input_folder = PATH
+output_folder = PATH / "out"
 
 def measure() -> None:
     for path in input_folder.glob("*.png"):

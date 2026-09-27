@@ -1,13 +1,8 @@
 """Main application window."""
 
-from PySide6.QtCore import QTimer, Qt, Signal
-from PySide6.QtGui import QCloseEvent, QResizeEvent, QFontDatabase, QFont
-from PySide6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QGridLayout,
-    QLabel
-)
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QFont, QFontDatabase, QResizeEvent
+from PySide6.QtWidgets import QGridLayout, QLabel, QMainWindow, QWidget
 
 from pokedex_counter.config import APP_NAME, FONTS_DIR, SPRITES_DIR
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
@@ -132,7 +127,7 @@ class MainWindow(QMainWindow):
         content_width = self._central_widget.width()
         needed_content_height = layout.totalHeightForWidth(content_width)
 
-        chrome_height = self.frameGeometry().height() - self.geometry().height()
+        # chrome_height = self.frameGeometry().height() - self.geometry().height()
         target_height = needed_content_height
 
         if target_height != self.height():

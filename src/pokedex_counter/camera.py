@@ -2,6 +2,7 @@
 (the OBS Virtual Camera, by default), since device indices aren't stable
 across machines or reboots but device names are.
 """
+from __future__ import annotations
 
 from pygrabber.dshow_graph import FilterGraph
 

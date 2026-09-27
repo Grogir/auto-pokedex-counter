@@ -16,14 +16,19 @@ else:
 
 # Directory containing sprite images shown in the main window.
 RESOURCES_DIR = _PACKAGE_DIR / "resources"
-SPRITES_DIR = RESOURCES_DIR / "sprites_2"
-DETECTION_IMAGE_DIR = RESOURCES_DIR / "detection"
-DETECTION_TEXTBOX_DIR = RESOURCES_DIR / "textbox"
-FONTS_DIR = RESOURCES_DIR / "fonts"
+CALIBRATION_DIR = RESOURCES_DIR / "calibration"
 COMPARISON_DIR = RESOURCES_DIR / "comparison"
-WR_JSON_PATH = COMPARISON_DIR / "WR.json"
+DETECTION_IMAGE_DIR = RESOURCES_DIR / "detection"
+FONTS_DIR = RESOURCES_DIR / "fonts"
 ROUTE_DIR = RESOURCES_DIR / "route"
+SPRITES_DIR = RESOURCES_DIR / "sprites_2"
+DETECTION_TEXTBOX_DIR = RESOURCES_DIR / "textbox"
+
+
+WR_JSON_PATH = COMPARISON_DIR / "WR.json"
 ROUTE_PATH = ROUTE_DIR / "route.txt"
+CALIBRATION_FILENAMES = {"GAME_AREA": "full5.png"}
+
 
 # Where a completed run's per-section catch order is saved (see
 # services/pb_service.py). Unlike WR_JSON_PATH (a bundled read-only
@@ -39,10 +44,9 @@ else:
 
 # Label background colors.
 LABEL_COLOR_CATCH = "black"
-LABEL_COLOR_WR_MARKED = "yellow"
-LABEL_COLOR_OFF_ROUTE = "green"
 LABEL_COLOR_BONUS = "red"
+LABEL_COLOR_WR_ONLY = "yellow"
+LABEL_COLOR_WR_AND_PLAYER = "orange"
 LABEL_COLOR_IGNORED = "gray"
-LABEL_COLOR_REQUIRED = "dodgerblue"
+LABEL_COLOR_SECTION_REQUIRED = "dodgerblue"
 LABEL_COLOR_SECTION_BONUS = "lightpink"
-LABEL_COLOR_BOX_COUNT = "gray"

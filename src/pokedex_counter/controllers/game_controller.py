@@ -3,12 +3,13 @@ from PySide6.QtCore import QObject, Signal
 
 from pokedex_counter.game_config import ROUTE_SECTIONS, is_evolution
 
+
 class GameController(QObject):
     # (dex number, section it was found in). The section rides along because
     # the same dex number can be routed differently per section - notably as
     # a catch in one and an evolution in another - and the UI needs to know
     # which happened to color it (see is_evolution below).
-    pokemon_found = Signal(str, int, bool)
+    pokemon_found = Signal(str, bool)
     count_changed = Signal(int)
     section_changed = Signal(int)
 
@@ -66,10 +67,12 @@ class GameController(QObject):
             self.count += 1
             self.count_changed.emit(self.count)
 
-        # This is an event log, so repeated catches must remain visible to the
-        # boxes even though the Pokédex count is unique.
+        # We track repeated catches even though the Pokédex count is unique.
+        is_evo = is_evolution(section, name)
+        if is_evo and not is_new:
+            return
         self.section_catches.setdefault(section, []).append(name)
-        self.pokemon_found.emit(name, section, is_evolution(section, name))
+        self.pokemon_found.emit(name, is_evo)
         new_section = self.current_section()
         if new_section != section:
             self.section_changed.emit(new_section)

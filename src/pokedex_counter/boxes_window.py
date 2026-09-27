@@ -1,4 +1,5 @@
 """Window that tracks the team and the Pokemon stored in PC boxes."""
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -6,8 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
-from pokedex_counter.config import LABEL_COLOR_BOX_COUNT, SPRITES_DIR
-from pokedex_counter.game_config import POKEMON_NAME_TO_DEX, POKEMON_DEX_TO_NAME
+from pokedex_counter.config import SPRITES_DIR
+from pokedex_counter.game_config import POKEMON_DEX_TO_NAME, POKEMON_NAME_TO_DEX
 
 TEAM_SIZE = 6
 BOX_SIZE = 20
@@ -15,7 +16,7 @@ VISIBLE_BOXES = 7
 SPRITE_SIZE = 25
 
 # Only names in this set get a visible icon, so the window stays readable while still retaining the slot occupied by every Pokemon.
-DISPLAYED_POKEMON = frozenset({"EXEGGCUTE", "NIDORAN♀", "NIDORINA", "EKANS", "PARAS", "GASTLY", "CLEFAIRY", "NIDORINO", "ABRA", "DRATINI", "GRIMER", "PONYTA", "POLIWAG", "POLIWHIRL", "EEVEE", "SLOWPOKE", "EEVEE", "EEVEE", "MEOWTH", "OMANYTE", "WEEDLE", "KAKUNA", "IVYSAUR", "BELLSPROUT", "WEEPINBELL", "MANKEY", "SQUIRTLE", "WARTORTLE", "PIKACHU", "VOLTORB", "ODDISH", "GLOOM", "JIGGLYPUFF", "CUBONE", "GOLDEEN", "DODUO", "HORSEA", "KABUTO", "RATTATA", "METAPOD", "RHYHORN", "CHARMANDER", "CHARMELEON", "PIDGEOTTO", "TENTACOOL", "VULPIX", "VENONAT", "GROWLITHE", "SANDSHREW", "DROWZEE", "DIGLETT", "ZUBAT", "MACHOP", "GEODUDE", "STARYU", "KRABBY", "PSYDUCK", "SHELLDER", "MAGIKARP", "SEEL"})
+DISPLAYED_POKEMON = frozenset({"EXEGGCUTE", "NIDORAN♀", "NIDORINA", "EKANS", "PARAS", "GASTLY", "CLEFAIRY", "NIDORINO", "ABRA", "DRATINI", "GRIMER", "PONYTA", "POLIWAG", "POLIWHIRL", "EEVEE", "SLOWPOKE", "MEOWTH", "OMANYTE", "WEEDLE", "KAKUNA", "IVYSAUR", "BELLSPROUT", "WEEPINBELL", "MANKEY", "SQUIRTLE", "WARTORTLE", "PIKACHU", "VOLTORB", "ODDISH", "GLOOM", "JIGGLYPUFF", "CUBONE", "GOLDEEN", "DODUO", "HORSEA", "KABUTO", "RATTATA", "METAPOD", "RHYHORN", "CHARMANDER", "CHARMELEON", "PIDGEOTTO", "TENTACOOL", "VULPIX", "VENONAT", "GROWLITHE", "SANDSHREW", "DROWZEE", "DIGLETT", "ZUBAT", "MACHOP", "GEODUDE", "STARYU", "KRABBY", "PSYDUCK", "SHELLDER", "MAGIKARP", "SEEL"})
 DISPLAY_ALL = False  # If True, all Pokemon will be displayed, not just those in DISPLAYED_POKEMON.
 
 class BoxesWindow(QWidget):
@@ -27,7 +28,7 @@ class BoxesWindow(QWidget):
         super().__init__(parent)
         self.setWindowTitle("Pokémon Boxes")
         self.setMinimumWidth(100)
-        self._sprites_dir = Path(sprites_dir)
+        self._sprites_dir = sprites_dir
         self._sprite_width = SPRITE_SIZE
         self._sprite_height = SPRITE_SIZE
         self._sprite_padding = 0
@@ -200,7 +201,7 @@ class BoxesWindow(QWidget):
         title_layout.addWidget(title_label)
         count_label = QLabel()
         count_label.setFixedWidth(48)
-        count_label.setStyleSheet(f"color: {LABEL_COLOR_BOX_COUNT};")
+        count_label.setStyleSheet("color: gray;")
         title_layout.addWidget(count_label)
         row.addWidget(title_panel)
         self._count_labels.append(count_label)

@@ -1,6 +1,8 @@
 import cv2
 from PySide6.QtCore import QThread, Signal
+
 from pokedex_counter.detection_config import FRAME_SIZE_DETECTION
+
 
 class CaptureService(QThread):
     frame_ready = Signal(object)
@@ -9,19 +11,26 @@ class CaptureService(QThread):
         super().__init__()
         self.camera_index = source
         self.frame_skip = 1
+        self.running = True
         if isinstance(source, int):
             self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
         else:
             self.cap = cv2.VideoCapture(source)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE_DETECTION[0])
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE_DETECTION[1])
-        self.running = True
+        self.change_resolution(FRAME_SIZE_DETECTION)
+
+    def change_resolution(self, resolution):
+        if self.isRunning() and QThread.currentThread() != self:
+            raise RuntimeError("Resolution must be changed in the capture thread")
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+        changed = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        print(f"[CaptureService] Current resolution: {changed[0]}x{changed[1]}")
+        return changed
 
     def run(self):
         if not self.cap.isOpened():
             print(f"[CaptureService] ERROR: could not open camera index {self.camera_index}")
             return
-        print(f"[CaptureService] Opened VideoCapture in {int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
 
         frame_count = 0
         while self.running:

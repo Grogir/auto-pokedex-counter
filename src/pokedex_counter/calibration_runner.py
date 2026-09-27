@@ -3,28 +3,22 @@ from pathlib import Path
 
 import cv2
 
-from pokedex_counter.config import RESOURCES_DIR
+from pokedex_counter.config import CALIBRATION_FILENAMES, RESOURCES_DIR
 from pokedex_counter.roi_writer import update_roi_constants
 from pokedex_counter.services.calibration_service import CalibrationService
 from pokedex_counter.vision.image_io import load_color
 
-_FILENAMES = {"GAME_AREA": "full5.png"}
-
-# None means "not calibrated yet" - roi_config.py skips any entry whose
-# type has no locked position, and app.py shows a calibration prompt
-# instead of running detection until at least one is locked. This seed
-# only needs to exist so roi_writer's regex has `NAME = ...` lines to find
-# and replace on the first-ever calibration; the file is otherwise blank.
-_SEED_TEMPLATE = """GAME_AREA = None
-"""
+# None means "not calibrated yet" - app.py shows a calibration prompt
+# instead of running detection until one is locked. This seedonly needs
+# to exist so roi_writer's regex has `NAME = ...` lines to find and
+# replace on the first-ever calibration.
+_SEED_TEMPLATE = "GAME_AREA = None\n"
 
 
 def _writable_roi_calibration_path() -> Path:
     """Where calibration persists locked ROIs for next launch.
-
     Source/dev runs write straight into the package's roi_calibration.py
-    (the gitignored file `roi_config.py` imports GAME_AREA from). A frozen exe
-    has no such writable file — its modules are baked
+    A frozen exe has no such writable file — its modules are baked
     into the bundle — so it gets its own roi_calibration.py next to the
     executable instead. Either way, run_calibration() also returns the
     locked ROIs so the current run doesn't depend on this write (or a
@@ -36,17 +30,14 @@ def _writable_roi_calibration_path() -> Path:
 
 
 def _ensure_seeded(config_path: Path) -> None:
-    if config_path.exists():
-        return
-
-    config_path.write_text(_SEED_TEMPLATE)
+    if not config_path.exists():
+        config_path.write_text(_SEED_TEMPLATE)
 
 
-def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
+def run_calibration(calibration_service: CalibrationService) -> None:
     calibration_dir = RESOURCES_DIR / "calibration"
-
     templates = {}
-    for name, filename in _FILENAMES.items():
+    for name, filename in CALIBRATION_FILENAMES.items():
         path = calibration_dir / filename
         img = load_color(path)
         if img is None:
@@ -54,16 +45,15 @@ def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
             continue
         templates[name] = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    if not templates:
-        print("[Calibration] No reference images found, skipping calibration.")
-        return {}
+    calibration_service.start(templates)
 
-    print(f"[Calibration] Starting up — waiting to lock: {list(templates)}")
-    locked = CalibrationService(camera_index=camera_index).run(templates)  # no timeout: waits as long as needed
 
+def save_calibration_results(
+    locked: dict[str, tuple[int, int, int, int]],
+) -> None:
     if not locked:
-        print("[Calibration] Nothing locked, using the existing GAME_AREA value.")
-        return {}
+        print("[Calibration] Nothing locked, using the existing values.")
+        return
 
     config_path = _writable_roi_calibration_path()
     try:
@@ -72,5 +62,3 @@ def run_calibration(camera_index=2) -> dict[str, tuple[int, int, int, int]]:
         print(f"[Calibration] Updated {updated} in {config_path}")
     except OSError as exc:
         print(f"[Calibration] Could not persist calibrated ROIs to {config_path} ({exc}); using them for this session only.")
-
-    return locked

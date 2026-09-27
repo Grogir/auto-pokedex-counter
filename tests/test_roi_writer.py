@@ -1,7 +1,5 @@
 """Locks in atomic persistence of the calibrated full-game ROI."""
 
-from pathlib import Path
-
 import pytest
 
 from pokedex_counter.roi_writer import update_roi_constants

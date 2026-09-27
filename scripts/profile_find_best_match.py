@@ -1,21 +1,15 @@
-from pathlib import Path
 import cProfile
 import io
 import pstats
 from contextlib import redirect_stdout
+from pathlib import Path
 
-import cv2
-import numpy as np
-
-# from pokedex_counter.services.calibration_service import DEFAULT_SCALES
+from pokedex_counter.config import CALIBRATION_DIR, CALIBRATION_FILENAMES
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import find_best_match
-from pokedex_counter.config import RESOURCES_DIR
-
-
 
 ROOT = Path(__file__).resolve().parent.parent
-TEMPLATE_PATH = RESOURCES_DIR / "calibration" / "full5.png"
+TEMPLATE_PATH = CALIBRATION_DIR / CALIBRATION_FILENAMES["GAME_AREA"]
 FRAME_PATH = ROOT / "tests" / "fixtures" / "calibration" / "calibration_03.png"
 ITERATIONS = 1
 
@@ -26,13 +20,13 @@ def main() -> None:
 
     def run() -> None:
         for _ in range(ITERATIONS):
-            find_best_match(frame, template, [])
+            find_best_match(frame, template)
 
     profiler = cProfile.Profile()
     with redirect_stdout(io.StringIO()):
         profiler.runcall(run)
 
-    score, box = find_best_match(frame, template, [])
+    score, box = find_best_match(frame, template)
     print(f"template: {TEMPLATE_PATH} ({template.shape[1]}x{template.shape[0]})")
     print(f"frame:    {FRAME_PATH} ({frame.shape[1]}x{frame.shape[0]})")
     print(f"result:   score={score:.4f}, box={box}")

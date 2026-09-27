@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import cv2
 import numpy as np
 
-from pokedex_counter.detection_config import MIN_SHADE_SEPARATION
+# Minimum gap (0-255 grayscale units) required between adjacent k-means
+# shade-cluster centers for canonicalize_shades() to trust the clustering.
+# Below this, treat the crop as having no reliable 4-shade structure
+# (blank/transition frame) rather than rank-remapping noise into a
+# fabricated full-contrast pattern.
+MIN_SHADE_SEPARATION = 15.0
 
 _COARSE_SAMPLES = 40
 _MIN_FRAME_HEIGHT_RATIO = 0.1
@@ -44,7 +51,7 @@ def canonicalize_shades(gray: np.ndarray, k: int = 4, min_separation: float = MI
     return remapped.reshape(gray.shape)
 
 
-def find_best_match(frame_gray: np.ndarray, template: np.ndarray, scales: np.ndarray):
+def find_best_match(frame_gray: np.ndarray, template: np.ndarray):
     th, tw = template.shape[:2]
     fh, fw = frame_gray.shape[:2]
 
@@ -62,7 +69,7 @@ def find_best_match(frame_gray: np.ndarray, template: np.ndarray, scales: np.nda
     ]
 
     def score_at(height, target_frame=frame_gray):
-        width = int(round(tw * height / th))
+        width = round(tw * height / th)
         if width < 8 or height < 8 or width > target_frame.shape[1] or height > target_frame.shape[0]:
             return None, None
         resized = cv2.resize(template, (width, height))
@@ -74,7 +81,7 @@ def find_best_match(frame_gray: np.ndarray, template: np.ndarray, scales: np.nda
     best_height = None
 
     for height in coarse_heights:
-        score, _ = score_at(int(round(height / _COARSE_FRAME_DIVISOR)), coarse_frame)
+        score, _ = score_at(round(height / _COARSE_FRAME_DIVISOR), coarse_frame)
         if score is not None and score > best_score:
             best_score, best_height = score, height
 

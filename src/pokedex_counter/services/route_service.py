@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pokedex_counter.config import ROUTE_PATH
 
+
 @dataclass(frozen=True)
 class RouteSection:
     required: list[str]
@@ -63,7 +64,7 @@ def load_route_sections(
         normalized_bonuses = [_normalize_name(name) for name in bonuses]
         if minimum is None:
             minimum = len(required)
-        if not 0 < minimum <= len(set(name for name, _ in normalized_required)):
+        if not 0 < minimum <= len(normalized_required):
             raise ValueError(f"Invalid minimum on route section {line_number}")
         raw_sections.append(RouteSection(
             required=[name for name, _ in normalized_required],

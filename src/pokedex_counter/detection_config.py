@@ -42,13 +42,6 @@ ROI_IMAGE = {
 
 DETECTION_IMAGE_THRESHOLD = 0.85
 
-# Minimum gap (0-255 grayscale units) required between adjacent k-means
-# shade-cluster centers for canonicalize_shades() to trust the clustering.
-# Below this, treat the crop as having no reliable 4-shade structure
-# (blank/transition frame) rather than rank-remapping noise into a
-# fabricated full-contrast pattern.
-MIN_SHADE_SEPARATION = 15.0
-
 # Extra pixels of padding added around each calibrated ROI before matching,
 # so cv2.matchTemplate can search for the best-aligned position instead of
 # assuming the calibrated position is exactly right. Different capture

@@ -6,8 +6,17 @@ This is a dumb view: it holds no references to GameController/
 DetectionService/CaptureService. All cross-object wiring happens in
 app.py, matching the existing convention there.
 """
+from __future__ import annotations
 
-from PySide6.QtWidgets import QCheckBox, QFormLayout, QPushButton, QSpinBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFormLayout,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
 from pokedex_counter.config import APP_NAME
 
 DEFAULT_SPRITES_PER_ROW = 10

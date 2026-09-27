@@ -1,8 +1,9 @@
 """Widget that displays every image in a folder, wrapping onto new rows as the
 window is resized."""
+from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QPixmap
@@ -12,43 +13,24 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pokedex_counter.config import (
-    LABEL_COLOR_BONUS,
-    LABEL_COLOR_CATCH,
-    LABEL_COLOR_OFF_ROUTE,
-    LABEL_COLOR_BOX_COUNT,
-    LABEL_COLOR_REQUIRED,
-    LABEL_COLOR_SECTION_BONUS,
-)
+from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 from pokedex_counter.ui.widgets.flow_layout import FlowLayout
-from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
 class SpriteStrip(QWidget):
-    sprite_selected = Signal(Path)
-    sprite_deselected = Signal(str)
+    sprite_caught = Signal(Path)
+    sprite_uncaught = Signal(str)
     sprite_ignored = Signal(str, bool)
 
     def __init__(self, folder: Path, sprite_size: int = 24, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._folder = Path(folder)
-        self._sprite_size = sprite_size
+        self._folder = folder
         self._sprite_width = sprite_size
         self._sprite_height = sprite_size
         self._labels_by_name: dict[str, ClickableLabel] = {}
         self._pixmap_cache: dict[Path, QPixmap] = {}
-        self._wr_enabled = False
-        self._wr_names: set[str] = set()
-        self._bonus_names: set[str] = set()
-        self._section_names: set[str] = set()
-        self._section_bonus_names: set[str] = set()
-        # Caught sprites that got here by evolving rather than by being
-        # caught. Remembered per sprite (not just consulted once at catch
-        # time) so the retroactive recolor in set_bonus_names can tell the
-        # two apart long after the fact.
-        self._evolved_names: set[str] = set()
 
         self._layout = FlowLayout(self)
 
@@ -66,9 +48,7 @@ class SpriteStrip(QWidget):
 
         if not paths:
             placeholder = QLabel(f"No images found in {self._folder}")
-            placeholder.setStyleSheet(
-                f"color: {LABEL_COLOR_BOX_COUNT}; font-style: italic;"
-            )
+            placeholder.setStyleSheet("color: gray; font-style: italic;")
             self._layout.addWidget(placeholder)
             return
 
@@ -99,14 +79,14 @@ class SpriteStrip(QWidget):
         label.setToolTip(path.name)
         label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        self.draw_image_in_label(label)
+        self._draw_image_in_label(label)
 
-        label.clicked.connect(self._on_manual_click)
-        label.ignore_toggled.connect(self._on_ignored)
+        label.catch_clicked.connect(self._on_catch_clicked)
+        label.ignore_clicked.connect(self._on_ignore_clicked)
 
         return label
 
-    def draw_image_in_label(self, label) -> None:
+    def _draw_image_in_label(self, label) -> None:
         pixmap = self._pixmap_cache.get(label._path)
         if pixmap is None:
             pixmap = QPixmap(str(label._path))
@@ -145,125 +125,53 @@ class SpriteStrip(QWidget):
         self._sprite_width = width
         self._sprite_height = height
         for label in self._labels_by_name.values():
-            self.draw_image_in_label(label)
+            self._draw_image_in_label(label)
 
     def set_sprite_padding(self, padding) -> None:
         for label in self._labels_by_name.values():
             label.set_padding(padding)
-            self.draw_image_in_label(label)
-
-    def _catch_color_for(self, name: str) -> str:
-        """The background a catch of `name` should get. Bonus highlighting
-        outranks the WR colors - a bonus is worth seeing whether or not it
-        happens to also sit on the WR route - but only for a real catch:
-        evolving into a bonus pokemon is the ordinary way to get it, so it
-        gets the normal colors."""
-        if name in self._bonus_names and name not in self._evolved_names:
-            return LABEL_COLOR_BONUS
-        if self._wr_enabled and name not in self._wr_names:
-            return LABEL_COLOR_OFF_ROUTE
-        return LABEL_COLOR_CATCH
+            self._draw_image_in_label(label)
 
     def set_current_section(self, required: set[str], bonuses: set[str]) -> None:
-        self._section_names = set(required)
-        self._section_bonus_names = set(bonuses)
         for name, label in self._labels_by_name.items():
-            label.set_wr_marked(False)
-            if name in self._section_names:
-                label.set_section_color(LABEL_COLOR_REQUIRED)
-            elif name in self._section_bonus_names:
-                label.set_section_color(LABEL_COLOR_SECTION_BONUS)
-            else:
-                label.set_section_color(None)
+            label.set_section_state(name in required, name in bonuses)
 
-    def select_sprite(self, name: str, evolved: bool = False) -> bool:
+    def pokemon_found(self, name: str, evolved: bool = False) -> bool:
         """Mark `name` as obtained. `evolved` says it was obtained by
         evolution rather than by catching it, which suppresses the bonus
         highlight. Defaults to False so a plain "it was caught" call - the
         manual click path, and every test that predates bonuses - keeps
         working unchanged."""
         label = self._labels_by_name.get(name)
-        if label is None:
-            return False
-
-        # Before select(), which round-trips through _on_sprite_clicked and
-        # recomputes the color from _catch_color_for.
-        if evolved:
-            self._evolved_names.add(name)
-        else:
-            self._evolved_names.discard(name)
-
-        label.select(self._catch_color_for(name))
-        label.set_catch_color(self._catch_color_for(name))
-        return True
-
-    def deselect_sprite(self, name: str) -> bool:
-        label = self._labels_by_name.get(name)
-        if label is None:
-            return False
-
-        label.deselect()
-        return True
-
-    def mark_wr_section(self, names: set[str]) -> None:
-        """Highlight `names` blue, on top of whatever's already marked from
-        earlier sections - a WR pokemon missed in its own section stays
-        flagged instead of silently losing its highlight once the run moves
-        past it. Also remembers them so future catches are colored black
-        (on-route, whenever caught) or green (never on-route).
-
-        If one of `names` was already caught before its section came up
-        (so it was colored green as apparently off-route at the time),
-        correct it to black now that this section confirms it's on-route
-        after all."""
-        self._wr_enabled = True
-        self._wr_names |= set(names)
-        for name in names:
-            label = self._labels_by_name.get(name)
-            if label is None:
-                continue
-            label.set_wr_marked(True)
-            if label._selected:
-                label.set_catch_color(self._catch_color_for(name))
+        if label:
+            label.set_caught(True, evolved)
+            return True
+        return False
 
     def set_wr_names(self, names: set[str]) -> None:
         """Replace the WR names known up to the active section."""
-        self._wr_enabled = True
-        self._wr_names = set(names)
         for name, label in self._labels_by_name.items():
-            label.set_wr_marked(name in self._wr_names)
-            if label._selected:
-                label.set_catch_color(self._catch_color_for(name))
-
-    def clear_wr_marks(self) -> None:
-        """Turn off WR comparison: no more blue highlighting, and catches go
-        back to the default black."""
-        self._wr_enabled = False
-        self._wr_names = set()
-        for label in self._labels_by_name.values():
-            label.set_wr_marked(False)
+            label.set_wr(name in names)
 
     def set_bonus_names(self, names: set[str]) -> None:
         """Turn bonus highlighting on for `names`; an empty set turns it off
         again. Recolors what's already caught so flipping the setting
         mid-run applies retroactively instead of only to future catches -
         anything obtained by evolving stays unhighlighted."""
-        self._bonus_names = set(names)
         for name, label in self._labels_by_name.items():
-            label.set_catch_color(self._catch_color_for(name))
+            label.set_bonus(name in names)
 
     def reset(self) -> None:
         """Deselect every sprite, going through the same per-sprite deselect
         path a manual un-click takes so count/controller/detector state all
         stay consistent. Also drops any accumulated WR marks - since those
-        now persist across sections (see mark_wr_section), a fresh run
+        now persist across sections, a fresh run
         needs to re-earn them section by section rather than starting with
         every section the previous run ever reached still lit up blue."""
-        for name in self._labels_by_name:
-            self.deselect_sprite(name)
-            self._labels_by_name[name].clear_ignored()
-        if self._wr_enabled:
-            self.clear_wr_marks()
+        for label in self._labels_by_name.values():
+            label.set_caught(False)
+            label.set_ignored(False)
+            label.set_wr(False)
 
     def set_columns(self, columns: int) -> None:
         self._layout.set_columns(columns)
@@ -277,21 +185,24 @@ class SpriteStrip(QWidget):
     def minimumSizeHint(self):
         return self._layout.minimumSize()
 
-    def _on_manual_click(self, path: Path) -> None:
+    # Handlers for ClickableLabel signals, which are emitted when the user clicks on a sprite.
+    # The catches are bottom-up: the controller will call pokemon_found, so we only emit the signal here instead of painting the label twice.
+    def _on_catch_clicked(self, path: Path, caught: bool) -> None:
         name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
         label = self.sender()
 
         if isinstance(label, ClickableLabel):
-            if label._selected:
-                if label._just_unignored:
-                    label._just_unignored = False
-                    label.set_catch_color(LABEL_COLOR_CATCH)
-                else:
-                    label.set_catch_color(self._catch_color_for(name))
-                self.sprite_selected.emit(name)
+            if caught:
+                self.sprite_caught.emit(name)
             else:
-                self._evolved_names.discard(name)
-                self.sprite_deselected.emit(name)
+                label.set_caught(False)
+                self.sprite_uncaught.emit(name)
 
-    def _on_ignored(self, path: Path, ignored: bool) -> None:
+    def _on_ignore_clicked(self, path: Path, ignored: bool) -> None:
         self.sprite_ignored.emit(POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem), ignored)
+        name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
+        label = self.sender()
+
+        if isinstance(label, ClickableLabel):
+            self.sprite_ignored.emit(name, ignored)
+            label.set_ignored(ignored)

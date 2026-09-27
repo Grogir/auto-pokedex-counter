@@ -2,17 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from pokedex_counter.config import RESOURCES_DIR
-from pokedex_counter.services.calibration_service import DEFAULT_SCALES
+from pokedex_counter.config import CALIBRATION_DIR, CALIBRATION_FILENAMES
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import find_best_match
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "calibration"
-CALIBRATION_DIR = RESOURCES_DIR / "calibration"
-
-CALIBRATION_FILENAMES = {
-    "GAME_AREA": "full5.png",
-}
 
 FIXTURE_FILENAMES = ["calibration_01.png", "calibration_02.png"]
 
@@ -37,6 +31,6 @@ def calibrated_rois(calibration_templates):
 
 
 def _normalized_box(frame, template):
-    box = find_best_match(frame, template, DEFAULT_SCALES)[1]
+    box = find_best_match(frame, template)[1]
     height, width = frame.shape[:2]
     return (box[0] / width, box[1] / height, box[2] / width, box[3] / height)

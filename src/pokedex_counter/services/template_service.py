@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
+from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
+
 
 class TemplateService:
     def __init__(self, folder: Path):

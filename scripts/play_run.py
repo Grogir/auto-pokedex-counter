@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import json
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from pokedex_counter import boxes_window
 from pokedex_counter.boxes_window import BoxesWindow
-from pokedex_counter.config import COMPARISON_DIR, PB_JSON_PATH, WR_JSON_PATH
+from pokedex_counter.config import COMPARISON_DIR
 from pokedex_counter.controllers.game_controller import GameController
-from pokedex_counter.main_window import MainWindow
 from pokedex_counter.game_config import BONUSES
+from pokedex_counter.main_window import MainWindow
 
 RUN_PATH = COMPARISON_DIR / "WR_noafo.json"
 WAIT_MS = 50
