@@ -1,10 +1,11 @@
 """App-wide constants and settings."""
 
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 APP_NAME = "Pokédex Counter"
-APP_VERSION = "2.0"
+APP_VERSION = version("pokedex_counter")
 ORGANIZATION_NAME = APP_NAME
 
 # When frozen by PyInstaller, data files added via --add-data are extracted

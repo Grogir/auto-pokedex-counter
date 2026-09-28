@@ -1,7 +1,5 @@
 """Replace quoted Pokédex numbers in a file with canonical Pokémon names."""
 
-from __future__ import annotations
-
 import argparse
 import re
 from pathlib import Path

@@ -1,9 +1,9 @@
 [project]
 name = "pokedex_counter"
-version = "0.4.0"
+version = "2.0"
 description = "A Pokedex Counter for RB 151"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "PySide6>=6.6",

@@ -1,7 +1,5 @@
 """Observe a Windows-wide key without consuming it in other applications."""
 
-from __future__ import annotations
-
 import ctypes
 import logging
 from collections.abc import Callable

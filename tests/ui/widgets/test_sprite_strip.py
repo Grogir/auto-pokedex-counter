@@ -10,8 +10,6 @@ label background (see ClickableLabel._apply_style):
 
 Tests assert on the rendered stylesheet rather than private state.
 """
-from __future__ import annotations
-
 import re
 
 import pytest
