@@ -43,6 +43,24 @@ POKEMON_NAME_TO_DEX: dict[str, int] = {
 }
 POKEMON_DEX_TO_NAME = {number: name for name, number in POKEMON_NAME_TO_DEX.items()}
 
+CAN_EVOLVE = {"BULBASAUR", "IVYSAUR", "CHARMANDER", "CHARMELEON", "SQUIRTLE", "WARTORTLE", "CATERPIE", "METAPOD", "WEEDLE", "KAKUNA", "PIDGEY", "PIDGEOTTO", "RATTATA", "SPEAROW", "EKANS", "PIKACHU", "SANDSHREW", "NIDORAN♀", "NIDORINA", "NIDORAN♂", "NIDORINO", "CLEFAIRY", "VULPIX", "JIGGLYPUFF", "ZUBAT", "ODDISH", "GLOOM", "PARAS", "VENONAT", "DIGLETT", "MEOWTH", "PSYDUCK", "MANKEY", "GROWLITHE", "POLIWAG", "POLIWHIRL", "ABRA", "KADABRA", "MACHOP", "MACHOKE", "BELLSPROUT", "WEEPINBELL", "TENTACOOL", "GEODUDE", "GRAVELER", "PONYTA", "SLOWPOKE", "MAGNEMITE", "DODUO", "SEEL", "GRIMER", "SHELLDER", "GASTLY", "HAUNTER", "DROWZEE", "KRABBY", "VOLTORB", "EXEGGCUTE", "CUBONE", "KOFFING", "RHYHORN", "HORSEA", "GOLDEEN", "STARYU", "MAGIKARP", "EEVEE", "OMANYTE", "KABUTO", "DRATINI", "DRAGONAIR"}
+
+def evolutions_of(name: str) -> list[str]:
+    if name == "EEVEE":
+        return ["VAPOREON", "JOLTEON", "FLAREON"]
+    if name in CAN_EVOLVE:
+        return [POKEMON_DEX_TO_NAME[POKEMON_NAME_TO_DEX[name] + 1]]
+    return []
+
+def previous_form_of(name: str) -> str | None:
+    if name in POKEMON_NAME_TO_DEX:
+        if name in ("VAPOREON", "JOLTEON", "FLAREON"):
+            return "EEVEE"
+        previous = POKEMON_DEX_TO_NAME.get(POKEMON_NAME_TO_DEX[name] - 1)
+        if previous in CAN_EVOLVE:
+            return previous
+    return None
+
 ROUTE_SECTIONS = load_route_sections()
 
 def is_evolution(section_index: int, name: str) -> bool:

@@ -51,7 +51,6 @@ def run() -> int:
     window.close_requested.connect(app.quit)
     window.set_calibrated(is_calibrated())
     wire_ui_settings(settings, window, boxes_window)
-    wire_bonus_highlight(settings, window.sprite_strip, BONUSES)
     apply_section = wire_wr_comparison(controller, settings, window.sprite_strip)
 
     # --- persisted settings ---
@@ -133,16 +132,6 @@ def wire_preferences(settings: SettingsWindow,
     app.aboutToQuit.connect(lambda: prefs.setValue("boxes_window_position", boxes_window.pos()))
 
 
-def wire_bonus_highlight(settings: SettingsWindow,
-                         sprite_strip: SpriteStrip,
-                         bonuses: set[str]) -> None:
-    def apply(checked: bool) -> None:
-        sprite_strip.set_bonus_names(bonuses if checked else set())
-
-    settings.highlight_bonuses_checkbox.toggled.connect(apply)
-    apply(settings.highlight_bonuses_checkbox.isChecked())
-
-
 def wire_wr_comparison(controller: GameController,
                        settings: SettingsWindow,
                        sprite_strip: SpriteStrip):
@@ -151,9 +140,7 @@ def wire_wr_comparison(controller: GameController,
     def apply_section(section_index: int) -> None:
         if section_index < len(ROUTE_SECTIONS):
             route_section = ROUTE_SECTIONS[section_index]
-            sprite_strip.set_current_section(
-                set(route_section.required), set(route_section.bonuses)
-            )
+            sprite_strip.set_current_section(set(route_section.required), set(route_section.bonuses))
             wr_index = section_index
         else:
             sprite_strip.set_current_section(set(), set())
@@ -184,20 +171,23 @@ def wire_detection(controller: GameController,
     detector.detection.connect(controller.on_detection)
     controller.pokemon_found.connect(sprite_strip.pokemon_found)
     controller.pokemon_found.connect(boxes_window.pokemon_found)
+
     sprite_strip.sprite_caught.connect(controller.on_detection)
     sprite_strip.sprite_caught.connect(detector.select)
+    boxes_window.sprite_caught.connect(controller.on_detection)
+    boxes_window.sprite_caught.connect(detector.select)
     sprite_strip.sprite_uncaught.connect(controller.forget)
     sprite_strip.sprite_uncaught.connect(detector.forget)
     sprite_strip.sprite_uncaught.connect(boxes_window.remove_pokemon)
 
-    def on_ignore_toggled(name: str, ignored: bool) -> None:
-        if ignored:
-            controller.ignore(name)
-            detector.forget(name)
-            boxes_window.remove_pokemon(name)
-        else:
-            controller.unignore(name)
-    sprite_strip.sprite_ignored.connect(on_ignore_toggled)
+    sprite_strip.sprite_ignored.connect(controller.ignore)
+    sprite_strip.sprite_ignored.connect(detector.forget)
+    sprite_strip.sprite_ignored.connect(boxes_window.remove_pokemon)
+    sprite_strip.sprite_unignored.connect(controller.unignore)
+
+    controller.register_command("box", boxes_window.change_box)
+    controller.register_command("deposit", boxes_window.deposit)
+    controller.register_command("swap", boxes_window.swap)
 
 
 def wire_ui_settings(settings: SettingsWindow,
@@ -248,8 +238,17 @@ def wire_ui_settings(settings: SettingsWindow,
     settings.frameless_checkbox.toggled.connect(window.on_frameless_toggled)
     window.set_frameless_flag(settings.frameless_checkbox.isChecked())
 
+    def apply_bonuses(checked: bool) -> None:
+        window.sprite_strip.set_bonus_names(BONUSES if checked else set())
+    settings.highlight_bonuses_checkbox.toggled.connect(apply_bonuses)
+    apply_bonuses(settings.highlight_bonuses_checkbox.isChecked())
 
-def reset_run(controller, detector, window, boxes_window, apply_section):
+
+def reset_run(controller: GameController,
+              detector: DetectionService,
+              window: MainWindow,
+              boxes_window: BoxesWindow,
+              apply_section):
     maybe_prompt_save_pb(controller, window)
     controller.reset()
     detector.reset()

@@ -13,65 +13,65 @@ import pytest
 from PySide6.QtCore import Qt
 
 from pokedex_counter.app import (
-    wire_bonus_highlight,
     wire_detection,
+    wire_ui_settings,
 )
 from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import LABEL_COLOR_BONUS, LABEL_COLOR_CATCH, SPRITES_DIR
 from pokedex_counter.controllers.game_controller import GameController
+from pokedex_counter.game_config import BONUSES
+from pokedex_counter.main_window import MainWindow
 from pokedex_counter.services.capture_service import CaptureService
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.settings_window import SettingsWindow
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 from tests.conftest import sections_for
 
-BONUSES = {"CHARMANDER"}
-
 
 @pytest.fixture
 def wired(qtbot):
     settings = SettingsWindow()
-    strip = SpriteStrip(SPRITES_DIR)
+    window = MainWindow()
     qtbot.addWidget(settings)
-    qtbot.addWidget(strip)
-    return settings, strip
+    qtbot.addWidget(window)
+    return settings, window
 
 
 def test_checking_the_box_highlights_bonuses(wired):
-    settings, strip = wired
-    wire_bonus_highlight(settings, strip, BONUSES)
+    settings, window = wired
+    wire_ui_settings(settings, window, BoxesWindow())
     pokemon = next(iter(BONUSES))
-    strip.pokemon_found(pokemon)
+    window.sprite_strip.pokemon_found(pokemon)
 
     settings.highlight_bonuses_checkbox.setChecked(True)
-    assert LABEL_COLOR_BONUS in strip._labels_by_name[pokemon].styleSheet()
+    assert LABEL_COLOR_BONUS in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
     settings.highlight_bonuses_checkbox.setChecked(False)
-    assert LABEL_COLOR_CATCH in strip._labels_by_name[pokemon].styleSheet()
+    assert LABEL_COLOR_CATCH in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
 
 def test_a_restored_checked_setting_applies_without_a_toggle(wired):
     """app.py restores the checkbox from QSettings before wiring it, so a
     session that had the setting on must come up highlighting already -
     waiting for a toggle would silently lose the preference."""
-    settings, strip = wired
+    settings, window = wired
     settings.highlight_bonuses_checkbox.setChecked(True)  # as restored from QSettings
 
-    wire_bonus_highlight(settings, strip, BONUSES)
+    wire_ui_settings(settings, window, BoxesWindow())
     pokemon = next(iter(BONUSES))
-    strip.pokemon_found(pokemon)
+    window.sprite_strip.pokemon_found(pokemon)
 
-    assert LABEL_COLOR_BONUS in strip._labels_by_name[pokemon].styleSheet()
+    assert LABEL_COLOR_BONUS in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
 
 def test_starts_off_when_the_setting_is_off(wired):
-    settings, strip = wired
+    settings, window = wired
 
-    wire_bonus_highlight(settings, strip, BONUSES)
+    wire_ui_settings(settings, window, BoxesWindow())
     pokemon = next(iter(BONUSES))
-    strip.pokemon_found(pokemon)
+    window.sprite_strip.pokemon_found(pokemon)
 
-    assert LABEL_COLOR_CATCH in strip._labels_by_name[pokemon].styleSheet()
+    assert LABEL_COLOR_CATCH in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
 
 # --- found pokemon ---

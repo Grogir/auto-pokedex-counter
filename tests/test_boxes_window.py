@@ -1,3 +1,5 @@
+from PySide6.QtCore import Qt
+
 import pokedex_counter.boxes_window as boxes_module
 from pokedex_counter.boxes_window import BOX_SIZE, TEAM_SIZE, BoxesWindow
 from pokedex_counter.config import SPRITES_DIR
@@ -43,30 +45,38 @@ def test_evolution_is_remembered_but_not_assigned_a_slot(qtbot):
     assert all(not box for box in window.boxes[1:])
 
 
+def test_clicking_icon_emits_its_first_evolution(qtbot):
+    window = BoxesWindow(SPRITES_DIR)
+    qtbot.addWidget(window)
+    window.pokemon_found("EEVEE")
+    icon = window._rows[0][2][0].layout().itemAt(0).widget()
+
+    with qtbot.waitSignal(window.sprite_caught) as signal:
+        qtbot.mouseClick(icon, Qt.MouseButton.LeftButton)
+
+    assert signal.args == ["VAPOREON"]
+
+
 def test_hidden_pokemon_keeps_the_real_slot_number(qtbot, monkeypatch):
     monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"CATERPIE", "WEEPINBELL"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
 
-    for name in (
-        POKEMON_DEX_TO_NAME[number]
-        for number in range(10, 10 * (TEAM_SIZE + 3), 10)
-    ):
-        window.pokemon_found(name)
+    for _ in range(6): window.pokemon_found("PIDGEY")
+    window.pokemon_found("BULBASAUR")
+    window.pokemon_found("VENUSAUR")
 
     box_layout = window._rows[1][1]
     visible_slot = box_layout.itemAt(1).widget()
     slot_label = visible_slot.layout().itemAt(1).widget()
 
-    assert window.boxes[1] == ["SLOWBRO", "WEEPINBELL"]
+    assert window.boxes[1] == ["VENUSAUR", "BULBASAUR"]
     assert "2" in slot_label.text()
     assert box_layout.count() == 3  # title, visible slot 2, stretch
 
 
 def test_box_slot_labels_skip_displayed_pokemon(qtbot, monkeypatch):
     monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"SQUIRTLE", "WARTORTLE"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
     window.boxes[1].extend(["hidden-1", "SQUIRTLE", "hidden-2", "WARTORTLE"])
@@ -80,7 +90,6 @@ def test_box_slot_labels_skip_displayed_pokemon(qtbot, monkeypatch):
 
 def test_team_slot_labels_keep_their_physical_positions(qtbot, monkeypatch):
     monkeypatch.setattr(boxes_module, "DISPLAY_ALL", False)
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"SQUIRTLE", "WARTORTLE"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
     window.boxes[0].extend(["hidden-1", "SQUIRTLE", "hidden-2", "WARTORTLE"])
@@ -93,7 +102,6 @@ def test_team_slot_labels_keep_their_physical_positions(qtbot, monkeypatch):
 
 
 def test_resize_updates_existing_icon_widgets(qtbot, monkeypatch):
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"BULBASAUR"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
     window.pokemon_found("BULBASAUR")
@@ -106,7 +114,6 @@ def test_resize_updates_existing_icon_widgets(qtbot, monkeypatch):
 
 
 def test_rectangular_dimensions_resize_existing_box_icon(qtbot, monkeypatch):
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"BULBASAUR"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
     window.pokemon_found("BULBASAUR")
@@ -119,7 +126,6 @@ def test_rectangular_dimensions_resize_existing_box_icon(qtbot, monkeypatch):
 
 
 def test_padding_expands_existing_box_icon_label(qtbot, monkeypatch):
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"BULBASAUR"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
     window.pokemon_found("BULBASAUR")
@@ -135,7 +141,6 @@ def test_padding_expands_existing_box_icon_label(qtbot, monkeypatch):
 
 
 def test_resize_recalculates_geometry_for_a_populated_window(qtbot, monkeypatch):
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"BULBASAUR", "SQUIRTLE"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
 
@@ -184,7 +189,6 @@ def test_reset_clears_history_team_and_boxes(qtbot):
 
 
 def test_counts_include_hidden_pokemon(qtbot, monkeypatch):
-    monkeypatch.setattr(boxes_module, "DISPLAYED_POKEMON", frozenset({"BULBASAUR"}))
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
 

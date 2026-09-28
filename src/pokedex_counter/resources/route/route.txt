@@ -2,7 +2,11 @@ Bulbasaur
 Pidgey
 Caterpie
 Dugtrio
+deposit:Bulbasaur
+deposit:Caterpie
+deposit:Dugtrio
 Ekans
+swap:1,2
 Paras
 Nidoran♀
 Nidoran♂
@@ -15,8 +19,10 @@ Chansey
 Alakazam
 Kangaskhan
 Magneton
+box:2
 Seel Psyduck Magikarp Shellder Krabby Staryu - Golbat Golduck Kingler Dewgong
 Articuno - Golbat Golduck Kingler Dewgong
+box:3
 min:3 Machop Geodude Onix Zubat - Venomoth Graveler Golbat Machoke Marowak
 Machamp - Venomoth Graveler Golbat Machoke Marowak
 Machop Geodude Onix Zubat
@@ -25,6 +31,8 @@ Koffing - Sandshrew Drowzee Spearow
 Moltres - Sandshrew Drowzee Spearow
 Diglett - Sandshrew Drowzee Spearow
 Sandshrew Drowzee Hitmonchan Venonat Growlithe - Spearow
+deposit:Nidoran♂
+box:4
 Gastly
 Magmar
 Fearow
@@ -43,6 +51,7 @@ Kabuto - Raticate
 Horsea
 Spearow Rattata Doduo
 Mew
+box:5
 Goldeen
 Cubone - Jigglypuff
 Jigglypuff
@@ -57,6 +66,12 @@ Farfetch'd - Pikachu Magnemite Raichu
 Pikachu Magnemite
 Hitmonlee
 Squirtle
+deposit:Pidgey
+if:Parasect deposit:Paras
+deposit:Parasect
+deposit:Nidoqueen
+deposit:Exeggutor
+box:6
 Clefairy - Dratini Nidorino Abra
 Nidorino - Abra
 Abra
@@ -69,15 +84,16 @@ Ivysaur
 Lapras
 Weedle
 Omanyte
+box:7
 Jynx
 Ditto
 Aerodactyl
 Meowth
 Eevee
 Lickitung
-Eevee
+force:Eevee
 Slowpoke
-Eevee
+force:Eevee
 Poliwag
 Weezing
 min:1 Grimer Ponyta - Muk

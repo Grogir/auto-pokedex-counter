@@ -240,7 +240,8 @@ class DetectionService(QObject):
         self._last_detected = name
 
     def forget(self, name: str) -> None:
-        self._last_detected = None
+        if name == self._last_detected:
+            self._last_detected = None
 
     def reset(self) -> None:
         self._last_detected = None

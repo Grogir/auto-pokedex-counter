@@ -1,7 +1,5 @@
 """Widget that displays every image in a folder, wrapping onto new rows as the
 window is resized."""
-from __future__ import annotations
-
 import re
 from pathlib import Path
 
@@ -20,9 +18,10 @@ from pokedex_counter.ui.widgets.flow_layout import FlowLayout
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
 class SpriteStrip(QWidget):
-    sprite_caught = Signal(Path)
+    sprite_caught = Signal(str)
     sprite_uncaught = Signal(str)
-    sprite_ignored = Signal(str, bool)
+    sprite_ignored = Signal(str)
+    sprite_unignored = Signal(str)
 
     def __init__(self, folder: Path, sprite_size: int = 24, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -199,10 +198,12 @@ class SpriteStrip(QWidget):
                 self.sprite_uncaught.emit(name)
 
     def _on_ignore_clicked(self, path: Path, ignored: bool) -> None:
-        self.sprite_ignored.emit(POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem), ignored)
         name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
         label = self.sender()
 
         if isinstance(label, ClickableLabel):
-            self.sprite_ignored.emit(name, ignored)
+            if ignored:
+                self.sprite_ignored.emit(name)
+            else:
+                self.sprite_unignored.emit(name)
             label.set_ignored(ignored)

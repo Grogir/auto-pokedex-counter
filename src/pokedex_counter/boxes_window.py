@@ -1,25 +1,41 @@
 """Window that tracks the team and the Pokemon stored in PC boxes."""
-from __future__ import annotations
-
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent, QPainter, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
 from pokedex_counter.config import SPRITES_DIR
-from pokedex_counter.game_config import POKEMON_DEX_TO_NAME, POKEMON_NAME_TO_DEX
+from pokedex_counter.game_config import (
+    CAN_EVOLVE,
+    POKEMON_NAME_TO_DEX,
+    evolutions_of,
+    previous_form_of,
+)
 
 TEAM_SIZE = 6
 BOX_SIZE = 20
 VISIBLE_BOXES = 7
 SPRITE_SIZE = 25
 
-# Only names in this set get a visible icon, so the window stays readable while still retaining the slot occupied by every Pokemon.
-DISPLAYED_POKEMON = frozenset({"EXEGGCUTE", "NIDORAN♀", "NIDORINA", "EKANS", "PARAS", "GASTLY", "CLEFAIRY", "NIDORINO", "ABRA", "DRATINI", "GRIMER", "PONYTA", "POLIWAG", "POLIWHIRL", "EEVEE", "SLOWPOKE", "MEOWTH", "OMANYTE", "WEEDLE", "KAKUNA", "IVYSAUR", "BELLSPROUT", "WEEPINBELL", "MANKEY", "SQUIRTLE", "WARTORTLE", "PIKACHU", "VOLTORB", "ODDISH", "GLOOM", "JIGGLYPUFF", "CUBONE", "GOLDEEN", "DODUO", "HORSEA", "KABUTO", "RATTATA", "METAPOD", "RHYHORN", "CHARMANDER", "CHARMELEON", "PIDGEOTTO", "TENTACOOL", "VULPIX", "VENONAT", "GROWLITHE", "SANDSHREW", "DROWZEE", "DIGLETT", "ZUBAT", "MACHOP", "GEODUDE", "STARYU", "KRABBY", "PSYDUCK", "SHELLDER", "MAGIKARP", "SEEL"})
-DISPLAY_ALL = False  # If True, all Pokemon will be displayed, not just those in DISPLAYED_POKEMON.
+# If True, all Pokemon will be displayed, otherwise we display those who need to evolve
+DISPLAY_ALL = False
+
+class ClickableIcon(QLabel):
+    clicked = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
 class BoxesWindow(QWidget):
+    sprite_caught = Signal(str)
+
     def __init__(
         self,
         sprites_dir: Path = SPRITES_DIR,
@@ -35,7 +51,7 @@ class BoxesWindow(QWidget):
         self.boxes: list[list[str]] = [[] for _ in range(VISIBLE_BOXES + 1)]
         self.team = self.boxes[0]
         self._current_box = 1
-        self._undisplayed_pokemon: set[str] = set()
+        self._found: set[str] = set()
 
         self._layout = QVBoxLayout(self)
         self._rows: list[tuple[str, QHBoxLayout, list[QWidget]]] = []
@@ -43,76 +59,33 @@ class BoxesWindow(QWidget):
         self._build_rows()
         self._update_rows()
 
-    def pokemon_found(self, name: str, evolved: bool = False) -> bool:
+    def pokemon_found(self, name: str, evolved: bool = False) -> None:
         """Add a Pokemon to the team or boxes, if it is not already present. If it is an evolved form, replace the previous form in the team if present."""
-        self._handle_special_cases_before(name)
-        previous = self.previous_form(name)
-        if previous in DISPLAYED_POKEMON and previous != "EEVEE":
-            self._undisplayed_pokemon.add(previous)
+        self._found.add(name)
 
         if evolved:
+            previous_form = previous_form_of(name)
             for box in self.boxes:
-                if previous in box:
-                    if box is self.team or name in DISPLAYED_POKEMON:
-                        idx = box.index(previous)
-                        box[idx] = name
+                if previous_form in box:
+                    if box is self.team or name in CAN_EVOLVE:
+                        box[box.index(previous_form)] = name
                     else:
-                        box.remove(previous)
+                        box.remove(previous_form)
                         box.append(name)
-                    break
+                    self._update_rows()
+                    return
+
+        if len(self.team) < TEAM_SIZE:
+            self.team.append(name)
         else:
-            if len(self.team) < TEAM_SIZE:
-                self.team.append(name)
-            else:
-                if len(self.boxes[self._current_box]) >= BOX_SIZE:
-                    self.change_box(self._current_box + 1)
-                self.boxes[self._current_box].insert(0, name)
-
-        self._handle_special_cases_after(name)
+            if len(self.boxes[self._current_box]) >= BOX_SIZE:
+                self.change_box(self._current_box + 1)
+            self.boxes[self._current_box].insert(0, name)
         self._update_rows()
-        return True
 
-    def previous_form(self, name: str) -> str | None:
-        """Return the previous form of `name`, or None if it has no previous form."""
-        if name in ("JOLTEON", "FLAREON"):
-            return "EEVEE"
-        return POKEMON_DEX_TO_NAME.get(POKEMON_NAME_TO_DEX[name] - 1)
-
-    def _handle_special_cases_before(self, name: str) -> None:
-        if self._current_box == 1 and name == "EKANS":
-            self.deposit("BULBASAUR")
-            self.deposit("CATERPIE")
-            self.deposit("DUGTRIO")
-        elif self._current_box == 1 and "KANGASKHAN" in self.boxes[self._current_box] and name in ["SEEL", "PSYDUCK", "KRABBY", "SHELLDER", "STARYU", "GOLBAT", "GOLDUCK"]:
-            self.change_box(2)
-        elif self._current_box == 2 and "ARTICUNO" in self.boxes[self._current_box] and name in ["MACHOP", "GEODUDE", "ZUBAT", "ONIX", "VENOMOTH", "GRAVELER", "GOLBAT", "MACHOKE"]:
-            self.change_box(3)
-        elif self._current_box == 3 and name == "GASTLY":
-            self.deposit("NIDORAN♂")
-            self.change_box(4)
-
-    def _handle_special_cases_after(self, name: str) -> None:
-        if self._current_box == 1 and name == "DUGTRIO":
-            self.deposit("BULBASAUR")
-            self.deposit("CATERPIE")
-            self.deposit("DUGTRIO")
-        elif self._current_box == 1 and name == "EKANS" and len(self.team) == 2:
-            self.team[0], self.team[1] = self.team[1], self.team[0]
-        elif self._current_box == 4 and name == "MEW":
-            self.change_box(5)
-        elif self._current_box == 5 and name == "SQUIRTLE":
-            self.deposit("PIDGEY")
-            if "PARASECT" in self.boxes[1]: # only deposit paras if we have parasect
-                self.deposit("PARAS")
-            self.deposit("PARASECT")
-            self.deposit("NIDOQUEEN")
-            self.deposit("EXEGGUTOR")
-            self.change_box(6)
-        elif self._current_box == 6 and name == "OMANYTE":
-            self.change_box(7)
-
-    def change_box(self, box_number: int) -> None:
+    def change_box(self, box_number: int | str) -> None:
         """Change the current box to deposit into. Box numbers are 1-indexed."""
+        box_number = int(box_number)
         self._current_box = box_number
         while box_number >= len(self.boxes):
             self.boxes.append([])
@@ -128,20 +101,27 @@ class BoxesWindow(QWidget):
         self._update_rows()
         return True
 
+    def swap(self, slots: str) -> None:
+        slot1, sep, slot2 = slots.partition(",")
+        if slot1 and sep and slot2:
+            slot1 = int(slot1) - 1
+            slot2 = int(slot2) - 1
+            if 0 <= slot1 < len(self.team) and 0 <= slot2 < len(self.team):
+                self.team[slot1], self.team[slot2] = self.team[slot2], self.team[slot1]
+                self._update_rows()
+
     def reset(self) -> None:
         self.boxes = [[] for _ in range(VISIBLE_BOXES + 1)]
         self.team = self.boxes[0]
         self._current_box = 1
-        self._undisplayed_pokemon = set()
+        self._found = set()
         self._update_rows()
 
     def remove_pokemon(self, name: str) -> None:
         """Remove every occurrence of `name` from the team and all boxes."""
+        self._found.discard(name)
         for box in self.boxes:
             box[:] = [pokemon for pokemon in box if pokemon != name]
-        previous = self.previous_form(name)
-        if previous in self._undisplayed_pokemon:
-            self._undisplayed_pokemon.discard(previous)
         self._update_rows()
 
     def set_sprite_size(self, size: int) -> None:
@@ -216,11 +196,12 @@ class BoxesWindow(QWidget):
         slot_layout = QVBoxLayout(slot_widget)
         slot_layout.setContentsMargins(0, 0, 0, 0)
         slot_layout.setSpacing(0)
-        icon = QLabel()
+        icon = ClickableIcon()
         icon.setProperty("pokemon_name", "")
         icon.setFixedSize(self._sprite_width, self._sprite_height)
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet(f"padding: {self._sprite_padding}px;")
+        icon.clicked.connect(self._on_icon_clicked)
         slot_label = QLabel(self._slot_string(0, slot))
         slot_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         slot_layout.addWidget(icon)
@@ -230,8 +211,18 @@ class BoxesWindow(QWidget):
         slots.append(slot_widget)
 
     def _is_displayed(self, name: str) -> bool:
-        """Return True if `name` is in the set of displayed Pokemon."""
-        return (name in DISPLAYED_POKEMON and name not in self._undisplayed_pokemon) or DISPLAY_ALL
+        """Return True if `name` needs to be evolved."""
+        # return bool([evo for evo in evolutions_of(name) if evo not in self._found]) or DISPLAY_ALL
+        return any(evo not in self._found for evo in evolutions_of(name)) or DISPLAY_ALL
+
+    def _on_icon_clicked(self) -> None:
+        icon = self.sender()
+        if isinstance(icon, QLabel):
+            evolutions = evolutions_of(icon.property("pokemon_name") or "")
+            for evo in evolutions:
+                if evo not in self._found:
+                    self.sprite_caught.emit(evo)
+                    break
 
     def _update_rows(self) -> None:
         rows = self.boxes

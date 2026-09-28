@@ -1,7 +1,10 @@
-# core/controller.py
-from PySide6.QtCore import QObject, Signal
+from collections import deque
+from collections.abc import Callable
+
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from pokedex_counter.game_config import ROUTE_SECTIONS, is_evolution
+from pokedex_counter.services.route_service import RouteCommand, parse_route_command
 
 
 class GameController(QObject):
@@ -24,6 +27,16 @@ class GameController(QObject):
         # Section attribution is computed from this run's found triggers at
         # catch time, not from whatever section the run reaches later.
         self.section_catches: dict[int, list[str]] = {}
+        self._command_callbacks: dict[str, Callable[[str], None]] = {}
+        self._command_queue: deque[RouteCommand] = deque()
+        QTimer.singleShot(0, lambda: self._queue_route_commands(ROUTE_SECTIONS[0].commands_before))
+
+    def register_command(self, name: str, callback: Callable[[str], None]) -> None:
+        """Register a callback for a route command, receiving its parameter."""
+        command_name = name.upper()
+        if command_name in {"FORCE", "IF"}:
+            raise ValueError(f"{command_name} is a built-in route command")
+        self._command_callbacks[command_name] = callback
 
     def current_section(self) -> int:
         """Return the first incomplete section, or the section count when done."""
@@ -57,9 +70,6 @@ class GameController(QObject):
 
     def on_detection(self, name: str) -> None:
         section = self.current_section()
-        self._record_detection(name, section)
-
-    def _record_detection(self, name: str, section: int) -> None:
         self.ignored.discard(name)
         is_new = name not in self.found
         self.found.add(name)
@@ -76,6 +86,34 @@ class GameController(QObject):
         new_section = self.current_section()
         if new_section != section:
             self.section_changed.emit(new_section)
+            commands = [
+                command
+                for completed_section in range(section, new_section)
+                for command in ROUTE_SECTIONS[completed_section].commands_after
+            ]
+            self._queue_route_commands(commands)
+
+    def _queue_route_commands(self, commands: list[RouteCommand]) -> None:
+        if self._command_queue:
+            self._command_queue.extend(commands)
+            return
+        self._command_queue.extend(commands)
+        while self._command_queue:
+            self._execute_route_command(self._command_queue.popleft())
+
+    def _execute_route_command(self, command: RouteCommand) -> None:
+        if command.name == "FORCE":
+            self.on_detection(command.parameter)
+        elif command.name == "IF":
+            pokemon, separator, nested_command = command.parameter.partition(" ")
+            if separator and pokemon in self.found:
+                nested = parse_route_command(nested_command)
+                if nested is not None:
+                    self._execute_route_command(nested)
+        else:
+            callback = self._command_callbacks.get(command.name)
+            if callback is not None:
+                callback(command.parameter)
 
     def forget(self, name: str) -> None:
         for section in list(self.section_catches):
@@ -107,9 +145,9 @@ class GameController(QObject):
         if section >= len(sections):
             return
         missing = [name for name in sections[section].required if name not in self.found and name not in self.ignored]
-        done = len(sections[section].required) - len(missing)
-        for name in missing[:sections[section].minimum - done]:
-            self._record_detection(name, section)
+        already_done = len(sections[section].required) - len(missing)
+        for name in missing[:sections[section].minimum - already_done]:
+            self.on_detection(name)
 
     def reset(self) -> None:
         self.found.clear()
@@ -118,3 +156,4 @@ class GameController(QObject):
         self.section_catches.clear()
         self.count_changed.emit(self.count)
         self.section_changed.emit(0)
+        QTimer.singleShot(0, lambda: self._queue_route_commands(ROUTE_SECTIONS[0].commands_before))

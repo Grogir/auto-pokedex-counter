@@ -1,4 +1,10 @@
+import pokedex_counter.controllers.game_controller as game_controller_module
 from pokedex_counter.controllers.game_controller import GameController
+from pokedex_counter.services.route_service import (
+    RouteCommand,
+    RouteSection,
+    load_route_sections,
+)
 
 
 def test_duplicate_catches_are_logged_and_counted_once():
@@ -48,3 +54,62 @@ def test_reset_clears_the_run_state():
     assert controller.found == set()
     assert controller.section_catches == {}
     assert controller.current_section() == 0
+
+
+def test_route_commands_run_when_the_previous_section_is_completed(monkeypatch):
+    sections = [
+        RouteSection(
+            required=["BULBASAUR"], bonuses=[], minimum=1, evolutions=set(),
+            commands_after=[RouteCommand("MARK", "NEXT")],
+        ),
+        RouteSection(required=["PIDGEY"], bonuses=[], minimum=1, evolutions=set()),
+    ]
+    monkeypatch.setattr(game_controller_module, "ROUTE_SECTIONS", sections)
+    controller = GameController()
+    calls = []
+    controller.register_command("mark", calls.append)
+
+    controller.on_detection("BULBASAUR")
+
+    assert calls == ["NEXT"]
+    assert controller.current_section() == 1
+
+
+def test_force_and_if_commands_dispatch_at_a_section_boundary(monkeypatch):
+    sections = [
+        RouteSection(
+            required=["BULBASAUR"], bonuses=[], minimum=1, evolutions=set(),
+            commands_after=[
+                RouteCommand("IF", "CHARMANDER MARK:unexpected"),
+                RouteCommand("IF", "BULBASAUR MARK:matched"),
+                RouteCommand("FORCE", "PIDGEY"),
+            ],
+        ),
+        RouteSection(required=["PIDGEY"], bonuses=[], minimum=1, evolutions=set()),
+    ]
+    monkeypatch.setattr(game_controller_module, "ROUTE_SECTIONS", sections)
+    controller = GameController()
+    calls = []
+    controller.register_command("MARK", calls.append)
+
+    controller.on_detection("BULBASAUR")
+
+    assert calls == ["MATCHED"]
+    assert "PIDGEY" in controller.found
+    assert controller.section_catches == {0: ["BULBASAUR"], 1: ["PIDGEY"]}
+
+def test_commands_at_the_beginning_and_the_end(monkeypatch, tmp_path, qtbot):
+    route_path = tmp_path / "route.txt"
+    route_path.write_text(
+        "force:Bulbasaur\nIvysaur\nforce:Venusaur",
+        encoding="utf-8",
+    )
+    sections = load_route_sections(route_path)
+    monkeypatch.setattr(game_controller_module, "ROUTE_SECTIONS", sections)
+    controller = GameController()
+
+    qtbot.waitUntil(lambda: "BULBASAUR" in controller.found)
+    assert "BULBASAUR" in controller.found
+    controller.on_detection("IVYSAUR")
+    assert "IVYSAUR" in controller.found
+    assert "VENUSAUR" in controller.found
