@@ -13,7 +13,7 @@ from pokedex_counter.calibration_runner import (
 from pokedex_counter.camera import resolve_camera_index
 from pokedex_counter.config import APP_NAME, DETECTION_IMAGE_DIR, ORGANIZATION_NAME
 from pokedex_counter.controllers.game_controller import GameController
-from pokedex_counter.detection_config import is_calibrated
+from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES, ROUTE_SECTIONS
 from pokedex_counter.main_window import MainWindow
 from pokedex_counter.services.calibration_service import CalibrationService
@@ -49,7 +49,6 @@ def run() -> int:
     controller.count_changed.connect(window._update_counter)
     window.set_count_provider(controller.current_count)
     window.close_requested.connect(app.quit)
-    window.set_calibrated(is_calibrated())
     wire_ui_settings(settings, window, boxes_window)
     apply_section = wire_wr_comparison(controller, settings, window.sprite_strip)
 
@@ -58,7 +57,10 @@ def run() -> int:
     wire_preferences(settings, window, boxes_window, prefs, app)
 
     # --- event wiring ---
-    wire_detection(controller, detector, capture, window.sprite_strip, boxes_window)
+    apply_detection_type = wire_detection(
+        controller, detector, capture, calibration, window, boxes_window, settings
+    )
+    app.aboutToQuit.connect(capture.shutdown)
 
     app.aboutToQuit.connect(
         lambda: maybe_prompt_save_pb(controller, window)
@@ -70,15 +72,17 @@ def run() -> int:
     # --- calibration ---
     def on_calibrate_clicked() -> None:
         if not calibration.active:
-            capture.frame_ready.disconnect(detector.process_frame_textbox)
+            capture.frame_ready.disconnect(detector.process_frame)
+            if not capture.running:
+                capture.start()
             run_calibration(calibration)
 
     def on_calibration_finished(results) -> None:
         save_calibration_results(results)
         if results.get("GAME_AREA") is not None:
             detector.update_game_area(results["GAME_AREA"])
-            window.set_calibrated(True)
-        capture.frame_ready.connect(detector.process_frame_textbox, Qt.ConnectionType.DirectConnection)
+        apply_detection_type()
+        capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
 
     settings.calibrate_button.clicked.connect(on_calibrate_clicked)
     calibration.finished.connect(on_calibration_finished, Qt.ConnectionType.QueuedConnection)
@@ -88,7 +92,6 @@ def run() -> int:
     app.aboutToQuit.connect(global_backspace.close)
 
     # --- start ---
-    capture.start()
     window.show()
     boxes_window.show()
     settings.move(window.x() + window.frameGeometry().width() + 10, window.y())
@@ -108,6 +111,7 @@ def wire_preferences(settings: SettingsWindow,
         ("sprite_width", settings.sprite_width_spinbox),
         ("sprite_height", settings.sprite_height_spinbox),
         ("sprite_padding", settings.sprite_padding_spinbox),
+        ("bottom_margin", settings.bottom_margin_spinbox),
         ("box_sprite_width", settings.box_sprite_width_spinbox),
         ("box_sprite_height", settings.box_sprite_height_spinbox),
     ):
@@ -125,6 +129,14 @@ def wire_preferences(settings: SettingsWindow,
         checkbox.toggled.connect(
             lambda checked, setting_key=key: prefs.setValue(setting_key, checked)
         )
+
+    detection_type = prefs.value(
+        "detection_type", settings.detection_type_combo.currentData(), type=int
+    )
+    settings.detection_type_combo.setCurrentIndex(detection_type)
+    settings.detection_type_combo.currentIndexChanged.connect(
+        lambda type: prefs.setValue("detection_type", type)
+    )
 
     window.move(prefs.value("window_position", QPoint(10, 10)))
     app.aboutToQuit.connect(lambda: prefs.setValue("window_position", window.pos()))
@@ -163,11 +175,13 @@ def wire_wr_comparison(controller: GameController,
 def wire_detection(controller: GameController,
                    detector: DetectionService,
                    capture: CaptureService,
-                   sprite_strip: SpriteStrip,
-                   boxes_window: BoxesWindow) -> None:
-    capture.frame_ready.connect(
-        detector.process_frame_textbox, Qt.ConnectionType.DirectConnection
-    )
+                   calibration: CalibrationService,
+                   window: MainWindow,
+                   boxes_window: BoxesWindow,
+                   settings: SettingsWindow):
+    capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
+
+    sprite_strip = window.sprite_strip
     detector.detection.connect(controller.on_detection)
     controller.pokemon_found.connect(sprite_strip.pokemon_found)
     controller.pokemon_found.connect(boxes_window.pokemon_found)
@@ -189,6 +203,20 @@ def wire_detection(controller: GameController,
     controller.register_command("deposit", boxes_window.deposit)
     controller.register_command("swap", boxes_window.swap)
 
+    def apply_detection_type() -> None:
+        type = settings.detection_type_combo.currentData()
+        detector.set_detection_type(type)
+        window.set_calibrated(type == DETECTION_TYPE["NONE"] or detector.is_calibrated)
+        if not calibration.active:
+            if type == DETECTION_TYPE["NONE"]:
+                if capture.running:
+                    capture.stop()
+            elif not capture.running:
+                capture.start()
+    settings.detection_type_combo.currentIndexChanged.connect(apply_detection_type)
+    apply_detection_type()
+    return apply_detection_type
+
 
 def wire_ui_settings(settings: SettingsWindow,
                      window: MainWindow,
@@ -198,6 +226,9 @@ def wire_ui_settings(settings: SettingsWindow,
 
     settings.font_size_spinbox.valueChanged.connect(window.set_counter_font_size)
     window.set_counter_font_size(settings.font_size_spinbox.value())
+
+    settings.bottom_margin_spinbox.valueChanged.connect(window.set_bottom_margin)
+    window.set_bottom_margin(settings.bottom_margin_spinbox.value())
 
     settings.sprite_width_spinbox.valueChanged.connect(
         lambda width: window.set_sprite_dimensions(

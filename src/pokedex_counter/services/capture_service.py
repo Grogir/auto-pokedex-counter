@@ -9,18 +9,36 @@ class CaptureService(QThread):
 
     def __init__(self, source=2):
         super().__init__()
-        self.camera_index = source
+        self.source = source
         self.frame_skip = 1
-        self.running = True
-        if isinstance(source, int):
-            self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+        self.running = False
+        self.cap = None
+        self._priority = QThread.Priority.InheritPriority
+        self.finished.connect(self._restart_if_requested)
+
+    def _open_capture(self):
+        if isinstance(self.source, int):
+            self.cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
         else:
-            self.cap = cv2.VideoCapture(source)
+            self.cap = cv2.VideoCapture(self.source)
         self.change_resolution(FRAME_SIZE_DETECTION)
+
+    def start(self, priority=QThread.Priority.InheritPriority):
+        self._priority = priority
+        self.running = True
+        if self.isRunning():
+            return
+        super().start(priority)
+
+    def _restart_if_requested(self):
+        if self.running and not self.isRunning():
+            super().start(self._priority)
 
     def change_resolution(self, resolution):
         if self.isRunning() and QThread.currentThread() != self:
             raise RuntimeError("Resolution must be changed in the capture thread")
+        if self.cap is None:
+            raise RuntimeError("Camera is not started")
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
         changed = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
@@ -28,22 +46,34 @@ class CaptureService(QThread):
         return changed
 
     def run(self):
-        if not self.cap.isOpened():
-            print(f"[CaptureService] ERROR: could not open camera index {self.camera_index}")
-            return
+        try:
+            if not self.running:
+                return
+            self._open_capture()
+            if not self.cap or not self.cap.isOpened():
+                print(f"[CaptureService] ERROR: could not open camera index {self.source}")
+                self.running = False
+                return
 
-        frame_count = 0
-        while self.running:
-            if frame_count % self.frame_skip == 0:
-                ret, frame = self.cap.read()
-                if ret:
-                    self.frame_ready.emit(frame)
-            else:
-                self.cap.grab()
-            frame_count += 1
-        print("[CaptureService] Stopped running.")
+            frame_count = 0
+            while self.running:
+                if frame_count % self.frame_skip == 0:
+                    ret, frame = self.cap.read()
+                    if ret and self.running:
+                        self.frame_ready.emit(frame)
+                else:
+                    self.cap.grab()
+                frame_count += 1
+            print("[CaptureService] Stopped.")
+        finally:
+            if self.cap is not None:
+                self.cap.release()
+            self.cap = None
 
     def stop(self):
         self.running = False
-        self.cap.release()
-        self.wait()
+
+    def shutdown(self):
+        self.stop()
+        if self.isRunning():
+            self.wait()

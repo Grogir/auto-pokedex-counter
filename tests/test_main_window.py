@@ -12,6 +12,19 @@ def test_set_sprites_per_row_window_fits_the_last_column(main_window, qtbot):
     assert last_item.x() + last_item.width() <= main_window.sprite_strip.width()
 
 
+def test_bottom_margin_is_added_to_the_window_height(main_window):
+    main_window.set_calibrated(True)
+    main_window.set_bottom_margin(17)
+    content_width = main_window.centralWidget().width()
+    expected_height = (
+        main_window.centralWidget().layout().totalHeightForWidth(content_width) + 17
+    )
+
+    main_window._sync_height_to_width()
+
+    assert main_window.height() == expected_height
+
+
 def test_closing_main_window_requests_application_quit(main_window, qtbot):
     close_requested = qtbot.waitSignal(main_window.close_requested, timeout=1000)
 

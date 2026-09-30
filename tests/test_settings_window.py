@@ -43,3 +43,10 @@ def test_sprite_dimensions_are_separate_and_start_equal(settings):
     assert settings.sprite_height_spinbox.value() == 24
     assert label_for(settings, settings.sprite_width_spinbox) == "Sprite width:"
     assert label_for(settings, settings.sprite_height_spinbox) == "Sprite height:"
+
+
+def test_bottom_margin_spinbox_is_labeled_and_starts_at_zero(settings):
+    assert label_for(settings, settings.bottom_margin_spinbox) == "Bottom margin:"
+    assert settings.bottom_margin_spinbox.value() == 0
+    assert settings.bottom_margin_spinbox.minimum() == 0
+

@@ -45,6 +45,13 @@ def test_start_connects_frame_handler_and_changes_resolution_from_frame(monkeypa
 
     assert capture.calls == [FRAME_SIZE_CALIBRATION]
 
+
+def test_start_requires_capture_service_when_templates_are_provided():
+    service = CalibrationService()
+
+    with pytest.raises(RuntimeError, match="requires a capture service"):
+        service.start({"TEST": np.zeros((1, 1), dtype=np.uint8)})
+
 CASES = [
     (fixture_name, label)
     for fixture_name in FIXTURE_FILENAMES

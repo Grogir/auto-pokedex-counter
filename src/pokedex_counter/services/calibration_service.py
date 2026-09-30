@@ -31,7 +31,7 @@ class CalibrationService(QObject):
 
     def __init__(
         self,
-        capture_service,
+        capture_service=None,
         lock_threshold=DEFAULT_LOCK_THRESHOLD,
         confirm_delay=DEFAULT_CONFIRM_DELAY,
         position_tolerance=DEFAULT_POSITION_TOLERANCE,
@@ -50,6 +50,8 @@ class CalibrationService(QObject):
             print("[Calibration] No reference images found, skipping calibration.")
             self.finished.emit({})
             return
+        if self.capture_service is None:
+            raise RuntimeError("CalibrationService requires a capture service to start")
         self.pending = dict(templates)
         self.locked = {}
         self.candidates = {}

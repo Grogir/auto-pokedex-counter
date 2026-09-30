@@ -6,6 +6,7 @@ from pokedex_counter.detection_config import (
     CHARSET_FILE_PATH,
     DETECTION_IMAGE_TEXT_NAMES,
     DETECTION_IMAGE_THRESHOLD,
+    DETECTION_TYPE,
     GAMEBOY_SIZE,
     ROI_IMAGE,
     ROI_SEARCH_MARGIN,
@@ -36,16 +37,33 @@ class DetectionService(QObject):
         self._last_detected = None
         self._section_provider = section_provider
         self._game_area = GAME_AREA
+        self._detection_type = DETECTION_TYPE["TEXT"]
 
         self._textbox_top = load_gray(TEXTBOX_TOP_FILE_PATH)
         self._textbox_bottom = load_gray(TEXTBOX_BOTTOM_FILE_PATH)
-        self._text = ""
         self._charset_templates = self._load_charset()
+        self._last_text = ""
 
         self._roi_groups = []
 
     def update_game_area(self, area) -> None:
         self._game_area = area
+
+    @property
+    def is_calibrated(self) -> bool:
+        return self._game_area is not None
+
+    def set_detection_type(self, detection_type: int) -> None:
+        if detection_type not in DETECTION_TYPE.values():
+            raise ValueError(f"Unknown detection type: {detection_type}")
+        self._detection_type = detection_type
+
+    @Slot(object)
+    def process_frame(self, frame) -> None:
+        if self._detection_type == DETECTION_TYPE["TEXT"]:
+            self.process_frame_textbox(frame)
+        elif self._detection_type == DETECTION_TYPE["SPRITE"]:
+            self.process_frame_image(frame)
 
     def _active_section(self) -> int:
         if self._section_provider is None:
@@ -76,7 +94,6 @@ class DetectionService(QObject):
                 charset_templates[binary] = CHARSET[idx]
         return charset_templates
 
-    @Slot(object)
     def process_frame_textbox(self, frame):
         if self._game_area is None:
             return
@@ -133,9 +150,9 @@ class DetectionService(QObject):
             line2 += best
             if self.debug and score != 0: log += f" [2,{c}]\"{best}\"={score}"
         text = (line1.rstrip() + " " + line2).rstrip()
-        if text != "" and text != self._text:
+        if text != "" and text != self._last_text:
             print(f'"{text}"{log}')
-            self._text = text
+            self._last_text = text
 
             if text.endswith(" was caught!"):
                 mon = text[:-12]
@@ -167,7 +184,6 @@ class DetectionService(QObject):
         roi_groups.append(section_group(len(ROUTE_SECTIONS), FINAL_SECTION))
         self._roi_groups = roi_groups
 
-    @Slot(object)
     def process_frame_image(self, frame):
         if self._game_area is None:
             return
@@ -245,3 +261,4 @@ class DetectionService(QObject):
 
     def reset(self) -> None:
         self._last_detected = None
+        self._last_text = ""

@@ -8,6 +8,7 @@ app.py, matching the existing convention there.
 """
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFormLayout,
     QPushButton,
     QSpinBox,
@@ -16,11 +17,13 @@ from PySide6.QtWidgets import (
 )
 
 from pokedex_counter.config import APP_NAME
+from pokedex_counter.detection_config import DETECTION_TYPE
 
 DEFAULT_SPRITES_PER_ROW = 10
 DEFAULT_FONT_SIZE = 24
 DEFAULT_SPRITE_SIZE = 24
 DEFAULT_SPRITE_PADDING = 3
+DEFAULT_BOTTOM_MARGIN = 0
 
 class SettingsWindow(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -64,6 +67,18 @@ class SettingsWindow(QWidget):
         self.font_size_spinbox.setRange(8, 96)
         self.font_size_spinbox.setValue(DEFAULT_FONT_SIZE)
         form.addRow("Counter font size:", self.font_size_spinbox)
+
+        self.bottom_margin_spinbox = QSpinBox()
+        self.bottom_margin_spinbox.setRange(0, 200)
+        self.bottom_margin_spinbox.setValue(DEFAULT_BOTTOM_MARGIN)
+        form.addRow("Bottom margin:", self.bottom_margin_spinbox)
+
+        self.detection_type_combo = QComboBox()
+        self.detection_type_combo.addItem("No detection", DETECTION_TYPE["NONE"])
+        self.detection_type_combo.addItem("Text detection", DETECTION_TYPE["TEXT"])
+        self.detection_type_combo.addItem("Sprite detection", DETECTION_TYPE["SPRITE"])
+        self.detection_type_combo.setCurrentIndex(1)
+        form.addRow("Detection type:", self.detection_type_combo)
 
         self.compare_to_wr_checkbox = QCheckBox()
         form.addRow("Compare to WR?", self.compare_to_wr_checkbox)

@@ -9,9 +9,11 @@ from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
 DEFAULT_COUNTER_FONT_SIZE = 24
 CALIBRATION_MESSAGE_FONT_SIZE = 12
+CALIBRATION_MESSAGE_MARGIN = 200
 CALIBRATION_NEEDED_MESSAGE = (
-    "Please calibrate your layout by showing the title screen "
-    "with Squirtle as the visible Pokémon"
+    "Please calibrate your layout:\n"
+    "Start the Virtual Camera in OBS, go ingame to the title screen"
+    " with Squirtle as the visible Pokémon, then click on Calibrate."
 )
 
 
@@ -22,8 +24,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(APP_NAME)
         self.resize(300, 600)
-        self._calibrated = True
+        self._calibrated = False
         self._counter_font_size = DEFAULT_COUNTER_FONT_SIZE
+        self._bottom_margin = 0
         self._count_provider = None
 
         self._build_ui()
@@ -43,12 +46,12 @@ class MainWindow(QMainWindow):
 
         self.sprite_strip = SpriteStrip(SPRITES_DIR)
 
-        layout.addWidget(self.sprite_strip)
+        layout.addWidget(self.sprite_strip, 0, 0)
 
         self.counter_label = QLabel("0")
         self.counter_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.counter_label.setContentsMargins(1, 1, 1, 1)
-        self.counter_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.counter_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         font_id = QFontDatabase.addApplicationFont(str(FONTS_DIR / "Pokemon Solid.ttf"))
         families = QFontDatabase.applicationFontFamilies(font_id)
         self._counter_font_family = families[0] if families else self.counter_label.font().family()
@@ -67,15 +70,20 @@ class MainWindow(QMainWindow):
         font.setPointSize(points)
         self.counter_label.setFont(font)
         if self._calibrated:
-            self.counter_label.setFixedHeight(self.counter_label.fontMetrics().ascent() + 3)
+            # This font is broken, so we have to manually set the height
+            self.counter_label.setFixedHeight(round(self.counter_label.fontMetrics().height() * 0.75 + 2))
+            self._update_counter(self._count_provider() if self._count_provider is not None else 0)
         else:
-            self.counter_label.setMinimumHeight(0)
-            self.counter_label.setMaximumHeight(16777215)
+            self.counter_label.setMaximumHeight(1000)
 
     def _update_counter(self, value: int):
         if not self._calibrated:
             return
-        self.counter_label.setText(f" {value}")
+        value = str(value)
+        # This font is broken, so we have to manually set the width
+        rect = self.counter_label.fontMetrics().boundingRect(value)
+        self.counter_label.setFixedWidth(round(rect.width() * 1.1 + 2))
+        self.counter_label.setText(value)
 
     def set_calibrated(self, calibrated: bool) -> None:
         """Toggle between the normal "N caught" counter and a prompt to
@@ -119,17 +127,24 @@ class MainWindow(QMainWindow):
             self._apply_counter_font(points)
         QTimer.singleShot(0, self._sync_height_to_width)
 
+    def set_bottom_margin(self, margin: int) -> None:
+        self._bottom_margin = margin
+        QTimer.singleShot(0, self._sync_height_to_width)
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         QTimer.singleShot(0, self._sync_height_to_width)
 
     def _sync_height_to_width(self) -> None:
         layout = self._central_widget.layout()
         content_width = self._central_widget.width()
-        needed_content_height = layout.totalHeightForWidth(content_width)
 
-        # chrome_height = self.frameGeometry().height() - self.geometry().height()
-        target_height = needed_content_height
+        if self._calibrated:
+            margin = self._bottom_margin
+        else:
+            margin = CALIBRATION_MESSAGE_MARGIN
+            self.counter_label.setFixedWidth(content_width)
 
+        target_height = layout.totalHeightForWidth(content_width) + margin
         if target_height != self.height():
             self.resize(self.width(), target_height)
 
@@ -145,15 +160,11 @@ class MainWindow(QMainWindow):
         self.resize(300, 600)
 
     def mousePressEvent(self, event):
-        """Intercepte le clic de souris initial."""
         if event.button() == Qt.MouseButton.LeftButton:
-            # Calcule la distance entre le clic global et le coin supérieur gauche de la fenêtre
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
     def mouseMoveEvent(self, event):
-        """Déplace la fenêtre lorsque la souris glisse."""
         if event.buttons() == Qt.MouseButtons.LeftButton:
-            # Déplace la fenêtre en soustrayant le décalage initial
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()

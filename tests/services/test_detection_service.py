@@ -9,6 +9,7 @@ from pokedex_counter.config import (
     DETECTION_IMAGE_DIR,
 )
 from pokedex_counter.detection_config import (
+    DETECTION_TYPE,
     FRAME_SIZE_DETECTION,
 )
 from pokedex_counter.services.detection_service import DetectionService
@@ -150,3 +151,33 @@ def test_flat_frame_does_not_spuriously_match(sprite_templates, calibrated_rois)
     )
 
     assert detections == []
+
+
+@pytest.mark.parametrize(
+    "detection_type, expected_method",
+    [(DETECTION_TYPE["TEXT"], "process_frame_textbox"), (DETECTION_TYPE["SPRITE"], "process_frame_image")],
+)
+def test_process_frame_routes_to_the_selected_detection_method(
+    monkeypatch, detection_type, expected_method
+):
+    detector = _make_detector(None)
+    calls = []
+    monkeypatch.setattr(detector, "process_frame_textbox", lambda frame: calls.append("text"))
+    monkeypatch.setattr(detector, "process_frame_image", lambda frame: calls.append("sprite"))
+    detector.set_detection_type(detection_type)
+
+    detector.process_frame(object())
+
+    assert calls == ["text" if expected_method == "process_frame_textbox" else "sprite"]
+
+
+def test_process_frame_skips_detection_when_disabled(monkeypatch):
+    detector = _make_detector(None)
+    calls = []
+    monkeypatch.setattr(detector, "process_frame_textbox", lambda frame: calls.append("text"))
+    monkeypatch.setattr(detector, "process_frame_image", lambda frame: calls.append("sprite"))
+    detector.set_detection_type(DETECTION_TYPE["NONE"])
+
+    detector.process_frame(object())
+
+    assert calls == []
