@@ -25,17 +25,17 @@ def test_highlight_bonuses_checkbox_is_labeled_and_starts_off(settings):
     assert not settings.highlight_bonuses_checkbox.isChecked()
 
 
-def test_compare_to_wr_checkbox_is_labeled_and_starts_off(settings):
-    assert label_for(settings, settings.compare_to_wr_checkbox) == "Compare to WR?"
-    assert not settings.compare_to_wr_checkbox.isChecked()
+def test_comparison_dropdown_starts_with_none(settings):
+    assert label_for(settings, settings.comparison_combo) == "Comparison:"
+    assert settings.comparison_combo.itemText(0) == "None"
+    assert settings.comparison_combo.currentData() is None
 
 
-def test_the_two_highlight_settings_are_independent(settings):
-    """Both paint the same sprite backgrounds but are separate toggles -
-    neither checkbox may drag the other along."""
+def test_bonus_highlighting_is_independent_from_comparison(settings):
+    """Bonus highlighting and comparison selection are independent settings."""
     settings.highlight_bonuses_checkbox.setChecked(True)
 
-    assert not settings.compare_to_wr_checkbox.isChecked()
+    assert settings.comparison_combo.currentData() is None
 
 
 def test_sprite_dimensions_are_separate_and_start_equal(settings):

@@ -4,9 +4,9 @@ import pytest
 
 from pokedex_counter.config import (
     LABEL_COLOR_BONUS,
+    LABEL_COLOR_COMPARISON_AND_PLAYER,
+    LABEL_COLOR_COMPARISON_ONLY,
     LABEL_COLOR_SECTION_REQUIRED,
-    LABEL_COLOR_WR_AND_PLAYER,
-    LABEL_COLOR_WR_ONLY,
 )
 from pokedex_counter.ui.widgets.clickable_label import ClickableLabel
 
@@ -28,30 +28,30 @@ def test_select_then_deselect_round_trip(label):
     assert not label._caught
 
 
-def test_wr_mark_shows_while_uncaught(label):
-    label.set_wr(True)
-    assert f"background-color: {LABEL_COLOR_WR_ONLY};" in label.styleSheet()
+def test_comparison_mark_shows_while_uncaught(label):
+    label.set_comparison(True)
+    assert f"background-color: {LABEL_COLOR_COMPARISON_ONLY};" in label.styleSheet()
 
 
-def test_required_section_color_wins_over_wr_mark(label):
-    label.set_wr(True)
+def test_required_section_color_wins_over_comparison_mark(label):
+    label.set_comparison(True)
     label.set_section_state(required=True, bonus=False)
     assert f"background-color: {LABEL_COLOR_SECTION_REQUIRED};" in label.styleSheet()
 
 
-def test_non_required_section_color_does_not_win_over_wr_mark(label):
-    label.set_wr(True)
+def test_non_required_section_color_does_not_win_over_comparison_mark(label):
+    label.set_comparison(True)
     label.set_section_state(required=False, bonus=True)
 
-    assert f"background-color: {LABEL_COLOR_WR_ONLY};" in label.styleSheet()
+    assert f"background-color: {LABEL_COLOR_COMPARISON_ONLY};" in label.styleSheet()
 
 
-def test_catch_color_with_wr_mark(label):
-    """Bonus state wins over WR state once the sprite is caught."""
-    label.set_wr(True)
+def test_catch_color_with_comparison_mark(label):
+    """Bonus state wins over comparison state once the sprite is caught."""
+    label.set_comparison(True)
     label.set_bonus(True)
     label.set_caught(True)
-    assert f"background-color: {LABEL_COLOR_WR_AND_PLAYER};" in label.styleSheet()
+    assert f"background-color: {LABEL_COLOR_COMPARISON_AND_PLAYER};" in label.styleSheet()
 
 
 def test_bonus_mark_is_inert_until_the_label_is_caught(label):

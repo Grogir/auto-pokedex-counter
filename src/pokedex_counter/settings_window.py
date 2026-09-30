@@ -86,8 +86,9 @@ class SettingsWindow(QWidget):
         self.detection_type_combo.setCurrentIndex(1)
         form.addRow("Detection type:", self.detection_type_combo)
 
-        self.compare_to_wr_checkbox = QCheckBox()
-        form.addRow("Compare to WR?", self.compare_to_wr_checkbox)
+        self.comparison_combo = QComboBox()
+        self.comparison_combo.addItem("None", None)
+        form.addRow("Compare to:", self.comparison_combo)
 
         self.highlight_bonuses_checkbox = QCheckBox()
         form.addRow("Highlight bonuses", self.highlight_bonuses_checkbox)

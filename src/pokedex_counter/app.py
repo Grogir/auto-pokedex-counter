@@ -23,11 +23,11 @@ from pokedex_counter.game_config import BONUSES, ROUTE_SECTIONS
 from pokedex_counter.main_window import MainWindow
 from pokedex_counter.services.calibration_service import CalibrationService
 from pokedex_counter.services.capture_service import CaptureService
+from pokedex_counter.services.comparison_service import load_comparisons
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.global_hotkey import GlobalHotkey
 from pokedex_counter.services.pb_service import save_pb
 from pokedex_counter.services.template_service import TemplateService
-from pokedex_counter.services.wr_service import load_wr_cumulated_bonuses
 from pokedex_counter.settings_window import SettingsWindow
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
@@ -55,7 +55,9 @@ def run() -> int:
     window.set_count_provider(controller.current_count)
     window.close_requested.connect(app.quit)
     wire_ui_settings(settings, window, boxes_window)
-    apply_section = wire_wr_comparison(controller, settings, window.sprite_strip)
+    apply_section, refresh_comparisons = wire_comparison(
+        controller, settings, window.sprite_strip
+    )
 
     # --- persisted settings ---
     prefs = QSettings(ORGANIZATION_NAME, APP_NAME)
@@ -68,10 +70,13 @@ def run() -> int:
     app.aboutToQuit.connect(capture.shutdown)
 
     app.aboutToQuit.connect(
-        lambda: maybe_prompt_save_pb(controller, window)
+        lambda: maybe_prompt_save_pb(controller, window, refresh_comparisons)
     )
     settings.reset_button.clicked.connect(
-        lambda: reset_run(controller, detector, window, boxes_window, apply_section)
+        lambda: reset_run(
+            controller, detector, window, boxes_window, apply_section,
+            refresh_comparisons,
+        )
     )
 
     # --- calibration ---
@@ -126,7 +131,6 @@ def wire_preferences(settings: SettingsWindow,
         )
 
     for key, checkbox in (
-        ("compare_to_wr", settings.compare_to_wr_checkbox),
         ("highlight_bonuses", settings.highlight_bonuses_checkbox),
         ("frameless", settings.frameless_checkbox),
     ):
@@ -134,6 +138,14 @@ def wire_preferences(settings: SettingsWindow,
         checkbox.toggled.connect(
             lambda checked, setting_key=key: prefs.setValue(setting_key, checked)
         )
+
+    comparison = prefs.value("comparison", settings.comparison_combo.currentData())
+    comparison_index = settings.comparison_combo.findData(comparison)
+    if comparison_index >= 0:
+        settings.comparison_combo.setCurrentIndex(comparison_index)
+    settings.comparison_combo.currentIndexChanged.connect(
+        lambda _: prefs.setValue("comparison", settings.comparison_combo.currentData())
+    )
 
     detection_type = prefs.value(
         "detection_type", settings.detection_type_combo.currentData(), type=int
@@ -159,32 +171,48 @@ def wire_preferences(settings: SettingsWindow,
     app.aboutToQuit.connect(lambda: prefs.setValue("boxes_window_position", boxes_window.pos()))
 
 
-def wire_wr_comparison(controller: GameController,
-                       settings: SettingsWindow,
-                       sprite_strip: SpriteStrip):
-    wr_bonuses = load_wr_cumulated_bonuses()
+def wire_comparison(controller: GameController,
+                    settings: SettingsWindow,
+                    sprite_strip: SpriteStrip):
+    comparisons = {}
 
     def apply_section(section_index: int) -> None:
         if section_index < len(ROUTE_SECTIONS):
             route_section = ROUTE_SECTIONS[section_index]
             sprite_strip.set_current_section(set(route_section.required), set(route_section.bonuses))
-            wr_index = section_index
+            comparison_index = section_index
         else:
             sprite_strip.set_current_section(set(), set())
-            wr_index = len(ROUTE_SECTIONS) - 1
+            comparison_index = len(ROUTE_SECTIONS) - 1
 
-        if settings.compare_to_wr_checkbox.isChecked():
-            sprite_strip.set_wr_names(wr_bonuses[wr_index])
-        else:
-            sprite_strip.set_wr_names(set())
+        comparison = comparisons.get(settings.comparison_combo.currentData())
+        names = comparison.cumulative_bonuses.get(comparison_index, set()) if comparison else set()
+        sprite_strip.set_comparison_names(names)
 
     def reapply_section() -> None:
         apply_section(controller.current_section())
 
+    def refresh_comparisons() -> None:
+        selected = settings.comparison_combo.currentData()
+        comparisons.clear()
+        comparisons.update({comparison.key: comparison for comparison in load_comparisons()})
+
+        combo = settings.comparison_combo
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("None", None)
+        for comparison in comparisons.values():
+            combo.addItem(comparison.name, comparison.key)
+        selected_index = combo.findData(selected)
+        combo.setCurrentIndex(max(selected_index, 0))
+        combo.blockSignals(False)
+        reapply_section()
+
+    refresh_comparisons()
     controller.section_changed.connect(apply_section)
-    settings.compare_to_wr_checkbox.toggled.connect(reapply_section)
+    settings.comparison_combo.currentIndexChanged.connect(reapply_section)
     apply_section(0)
-    return apply_section
+    return apply_section, refresh_comparisons
 
 
 def wire_detection(controller: GameController,
@@ -304,8 +332,9 @@ def reset_run(controller: GameController,
               detector: DetectionService,
               window: MainWindow,
               boxes_window: BoxesWindow,
-              apply_section):
-    maybe_prompt_save_pb(controller, window)
+              apply_section,
+              refresh_comparisons):
+    maybe_prompt_save_pb(controller, window, refresh_comparisons)
     controller.reset()
     detector.reset()
     window.sprite_strip.reset()
@@ -313,7 +342,7 @@ def reset_run(controller: GameController,
     apply_section(0)
 
 
-def maybe_prompt_save_pb(controller, window) -> None:
+def maybe_prompt_save_pb(controller, window, refresh_comparisons) -> None:
     """If the current run has the full 151, ask whether to save it as
     PB.json before its progress is lost (reset or app close)."""
     if controller.count != 151:
@@ -327,3 +356,4 @@ def maybe_prompt_save_pb(controller, window) -> None:
     )
     if reply == QMessageBox.StandardButton.Yes:
         save_pb(controller.section_catches)
+        refresh_comparisons()

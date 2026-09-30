@@ -43,7 +43,7 @@ class SpriteStrip(QWidget):
                 label._evolved,
                 label._ignored,
                 label._bonus,
-                label._wr,
+                label._comparison,
                 label._section_required,
                 label._section_bonus,
             )
@@ -70,11 +70,11 @@ class SpriteStrip(QWidget):
             self._labels_by_name[name] = label
             state = previous_states.get(name)
             if state is not None:
-                caught, evolved, ignored, bonus, wr, section_required, section_bonus = state
+                caught, evolved, ignored, bonus, comparison, section_required, section_bonus = state
                 label.set_caught(caught, evolved)
                 label.set_ignored(ignored)
                 label.set_bonus(bonus)
-                label.set_wr(wr)
+                label.set_comparison(comparison)
                 label.set_section_state(section_required, section_bonus)
             self._layout.addWidget(label)
 
@@ -176,10 +176,10 @@ class SpriteStrip(QWidget):
             return True
         return False
 
-    def set_wr_names(self, names: set[str]) -> None:
-        """Replace the WR names known up to the active section."""
+    def set_comparison_names(self, names: set[str]) -> None:
+        """Replace the comparison names known up to the active section."""
         for name, label in self._labels_by_name.items():
-            label.set_wr(name in names)
+            label.set_comparison(name in names)
 
     def set_bonus_names(self, names: set[str]) -> None:
         """Turn bonus highlighting on for `names`; an empty set turns it off
@@ -199,7 +199,7 @@ class SpriteStrip(QWidget):
         for label in self._labels_by_name.values():
             label.set_caught(False)
             label.set_ignored(False)
-            label.set_wr(False)
+            label.set_comparison(False)
 
     def set_columns(self, columns: int) -> None:
         self._layout.set_columns(columns)

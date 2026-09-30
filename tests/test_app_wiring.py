@@ -14,6 +14,8 @@ from PySide6.QtCore import QObject, QSettings, Qt, Signal
 from PySide6.QtWidgets import QApplication
 
 from pokedex_counter.app import (
+    maybe_prompt_save_pb,
+    wire_comparison,
     wire_detection,
     wire_preferences,
     wire_ui_settings,
@@ -30,6 +32,7 @@ from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES
 from pokedex_counter.main_window import MainWindow
 from pokedex_counter.services.calibration_service import CalibrationService
+from pokedex_counter.services.comparison_service import Comparison
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.settings_window import SettingsWindow
 from tests.conftest import sections_for
@@ -219,6 +222,68 @@ def test_sprite_set_preference_updates_both_windows_and_is_saved(wired, qtbot, t
     assert window.sprite_strip._folder == SPRITES_DIRS[1]
     assert boxes._sprites_dir == SPRITES_DIRS[1]
     assert prefs.value("sprite_set", type=int) == 2
+
+
+def test_comparison_preference_is_restored_and_saved(wired, tmp_path):
+    settings, window = wired
+    settings.comparison_combo.addItem("World record", "bundled:WR.json")
+    settings.comparison_combo.addItem("Personal best", "external:PB.json")
+    prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    prefs.setValue("comparison", "external:PB.json")
+
+    wire_preferences(settings, window, BoxesWindow(), prefs, QApplication.instance())
+
+    assert settings.comparison_combo.currentData() == "external:PB.json"
+    settings.comparison_combo.setCurrentIndex(1)
+    assert prefs.value("comparison") == "bundled:WR.json"
+
+
+def test_comparison_selection_updates_sprite_marks(wired, monkeypatch):
+    settings, window = wired
+    comparison = Comparison("test:route.json", "Test route", {0: {"BULBASAUR"}})
+    monkeypatch.setattr("pokedex_counter.app.load_comparisons", lambda: [comparison])
+
+    wire_comparison(GameController(), settings, window.sprite_strip)
+    settings.comparison_combo.setCurrentIndex(
+        settings.comparison_combo.findData(comparison.key)
+    )
+
+    assert window.sprite_strip._labels_by_name["BULBASAUR"]._comparison
+
+
+def test_prompt_to_save_pb_refreshes_comparison_list_after_saving(wired, monkeypatch):
+    from types import SimpleNamespace
+
+    from PySide6.QtWidgets import QMessageBox
+
+    settings, window = wired
+    available = [Comparison("bundled:WR.json", "WR", {0: set()})]
+    monkeypatch.setattr(
+        "pokedex_counter.app.load_comparisons", lambda: list(available)
+    )
+    _, refresh_comparisons = wire_comparison(
+        GameController(), settings, window.sprite_strip
+    )
+    saved = []
+    monkeypatch.setattr(
+        "pokedex_counter.app.QMessageBox.question",
+        lambda *args: QMessageBox.StandardButton.Yes,
+    )
+
+    def save(catches):
+        saved.append(catches)
+        available.append(Comparison("external:PB.json", "PB", {0: set()}))
+
+    monkeypatch.setattr("pokedex_counter.app.save_pb", save)
+
+    maybe_prompt_save_pb(
+        SimpleNamespace(count=151, section_catches={0: ["BULBASAUR"]}),
+        None,
+        refresh_comparisons,
+    )
+
+    assert saved == [{0: ["BULBASAUR"]}]
+    assert settings.comparison_combo.findData("external:PB.json") >= 0
 
 
 # --- found pokemon ---

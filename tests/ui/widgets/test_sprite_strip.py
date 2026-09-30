@@ -18,8 +18,8 @@ from PySide6.QtCore import Qt
 from pokedex_counter.config import (
     LABEL_COLOR_BONUS,
     LABEL_COLOR_CATCH,
-    LABEL_COLOR_WR_AND_PLAYER,
-    LABEL_COLOR_WR_ONLY,
+    LABEL_COLOR_COMPARISON_AND_PLAYER,
+    LABEL_COLOR_COMPARISON_ONLY,
     SPRITES_DIR,
     SPRITES_DIRS,
 )
@@ -110,7 +110,7 @@ def test_switching_sprite_folder_reloads_images_and_preserves_label_state(sprite
     sprite_strip.set_sprite_dimensions(40, 30)
     sprite_strip.set_sprite_padding(4)
     sprite_strip.set_bonus_names({"BULBASAUR"})
-    sprite_strip.set_wr_names({"BULBASAUR"})
+    sprite_strip.set_comparison_names({"BULBASAUR"})
     sprite_strip.set_current_section({"BULBASAUR"}, set())
     sprite_strip.pokemon_found("BULBASAUR")
 
@@ -119,35 +119,35 @@ def test_switching_sprite_folder_reloads_images_and_preserves_label_state(sprite
     label = sprite_strip._labels_by_name["BULBASAUR"]
     assert label._path.parent == SPRITES_DIRS[0]
     assert label._caught
-    assert label._bonus and label._wr and label._section_required
+    assert label._bonus and label._comparison and label._section_required
     assert label.size().width() == 48
     assert label.size().height() == 38
 
 
-# --- WR comparison colors ---
+# --- comparison colors ---
 
 def test_catch_is_black_when_no_feature_is_on(sprite_strip):
     sprite_strip.pokemon_found("BULBASAUR")
     assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH
 
 
-def test_wr_route_sprite_color_until_it_is_caught(sprite_strip):
-    sprite_strip.set_wr_names({"BULBASAUR"})
-    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_WR_ONLY
+def test_comparison_route_sprite_color_until_it_is_caught(sprite_strip):
+    sprite_strip.set_comparison_names({"BULBASAUR"})
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_COMPARISON_ONLY
 
     sprite_strip.pokemon_found("BULBASAUR")
     assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_CATCH
 
 
-def test_off_route_catch_color_while_comparing_to_wr(sprite_strip):
-    sprite_strip.set_wr_names({"BULBASAUR"})
+def test_off_route_catch_color_while_comparing_to_reference(sprite_strip):
+    sprite_strip.set_comparison_names({"BULBASAUR"})
     sprite_strip.pokemon_found("CHARMANDER")
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
 
-def test_returning_to_an_earlier_section_removes_future_wr_names(sprite_strip):
-    sprite_strip.set_wr_names({"BULBASAUR", "CHARMANDER"})
-    sprite_strip.set_wr_names({"BULBASAUR"})
+def test_returning_to_an_earlier_section_removes_future_comparison_names(sprite_strip):
+    sprite_strip.set_comparison_names({"BULBASAUR", "CHARMANDER"})
+    sprite_strip.set_comparison_names({"BULBASAUR"})
     sprite_strip.pokemon_found("CHARMANDER")
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
@@ -167,14 +167,14 @@ def test_bonus_is_not_highlighted_before_it_is_caught(sprite_strip):
     assert color_of(sprite_strip, "CHARMANDER") == "transparent"
 
 
-def test_bonus_with_and_without_wr_colors(sprite_strip):
+def test_bonus_with_and_without_comparison_colors(sprite_strip):
     sprite_strip.set_bonus_names({"BULBASAUR", "CHARMANDER", "SQUIRTLE"})
-    sprite_strip.set_wr_names({"BULBASAUR", "SQUIRTLE"})
+    sprite_strip.set_comparison_names({"BULBASAUR", "SQUIRTLE"})
     sprite_strip.pokemon_found("BULBASAUR")
     sprite_strip.pokemon_found("CHARMANDER")
-    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_WR_AND_PLAYER
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_COMPARISON_AND_PLAYER
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
-    assert color_of(sprite_strip, "SQUIRTLE") == LABEL_COLOR_WR_ONLY
+    assert color_of(sprite_strip, "SQUIRTLE") == LABEL_COLOR_COMPARISON_ONLY
 
 
 def test_enabling_bonuses_recolors_catches_already_made(sprite_strip):
@@ -187,7 +187,7 @@ def test_enabling_bonuses_recolors_catches_already_made(sprite_strip):
 
 def test_disabling_bonuses_puts_catches_back_to_their_color(sprite_strip):
     sprite_strip.set_bonus_names({"BULBASAUR", "CHARMANDER"})
-    sprite_strip.set_wr_names({"BULBASAUR"})
+    sprite_strip.set_comparison_names({"BULBASAUR"})
     sprite_strip.pokemon_found("BULBASAUR")
     sprite_strip.pokemon_found("CHARMANDER")
 
@@ -197,15 +197,15 @@ def test_disabling_bonuses_puts_catches_back_to_their_color(sprite_strip):
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
 
-def test_reaching_a_bonus_wr_section_does_not_clobber_its_red(sprite_strip):
-    """set_wr_names retroactively corrects a catch made before its
+def test_reaching_a_bonus_comparison_section_does_not_clobber_its_red(sprite_strip):
+    """set_comparison_names retroactively corrects a catch made before its
     section came up. That correction has to respect bonus highlighting
     instead of forcing the on-route black."""
     sprite_strip.set_bonus_names({"CHARMANDER"})
-    sprite_strip.set_wr_names({"BULBASAUR"})
+    sprite_strip.set_comparison_names({"BULBASAUR"})
     sprite_strip.pokemon_found("CHARMANDER")  # caught early, off route so far
-    sprite_strip.set_wr_names({"CHARMANDER"})  # its section arrives: on route after all
-    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_WR_AND_PLAYER
+    sprite_strip.set_comparison_names({"CHARMANDER"})  # its section arrives: on route after all
+    assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_COMPARISON_AND_PLAYER
 
 
 def test_bonus_names_missing_from_the_strip_are_ignored(sprite_strip):
@@ -249,9 +249,9 @@ def test_an_evolved_bonus_stays_black_when_highlighting_is_turned_on_later(sprit
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
 
-def test_evolved_bonus_and_wr_color(sprite_strip):
+def test_evolved_bonus_and_comparison_color(sprite_strip):
     sprite_strip.set_bonus_names({"CHARMANDER"})
-    sprite_strip.set_wr_names({"CHARMANDER"})
+    sprite_strip.set_comparison_names({"CHARMANDER"})
     sprite_strip.pokemon_found("CHARMANDER", evolved=True)
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_CATCH
 
@@ -286,7 +286,7 @@ def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip, q
     controller.pokemon_found.connect(sprite_strip.pokemon_found)
 
     sprite_strip.set_bonus_names({"BULBASAUR", "CHARMANDER"})
-    sprite_strip.set_wr_names({"BULBASAUR", "PIDGEY"})
+    sprite_strip.set_comparison_names({"BULBASAUR", "PIDGEY"})
 
     for name in ("BULBASAUR", "CHARMANDER", "SQUIRTLE"):
         label = sprite_strip._labels_by_name[name]
@@ -294,9 +294,9 @@ def test_manual_click_gets_the_same_colors_a_detected_catch_gets(sprite_strip, q
         qtbot.mouseClick(label, Qt.MouseButton.LeftButton)
 
     assert color_of(sprite_strip, "CHARMANDER") == LABEL_COLOR_BONUS
-    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_WR_AND_PLAYER
+    assert color_of(sprite_strip, "BULBASAUR") == LABEL_COLOR_COMPARISON_AND_PLAYER
     assert color_of(sprite_strip, "SQUIRTLE") == LABEL_COLOR_CATCH
-    assert color_of(sprite_strip, "PIDGEY") == LABEL_COLOR_WR_ONLY
+    assert color_of(sprite_strip, "PIDGEY") == LABEL_COLOR_COMPARISON_ONLY
 
 
 def test_clicking_ignored_bonus_color(sprite_strip, qtbot):

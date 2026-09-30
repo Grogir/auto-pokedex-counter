@@ -10,11 +10,11 @@ from PySide6.QtWidgets import (
 from pokedex_counter.config import (
     LABEL_COLOR_BONUS,
     LABEL_COLOR_CATCH,
+    LABEL_COLOR_COMPARISON_AND_PLAYER,
+    LABEL_COLOR_COMPARISON_ONLY,
     LABEL_COLOR_IGNORED,
     LABEL_COLOR_SECTION_BONUS,
     LABEL_COLOR_SECTION_REQUIRED,
-    LABEL_COLOR_WR_AND_PLAYER,
-    LABEL_COLOR_WR_ONLY,
 )
 
 
@@ -30,7 +30,7 @@ class ClickableLabel(QLabel):
         self._ignored = False
         self._bonus = False
         self._evolved = False
-        self._wr = False
+        self._comparison = False
         self._section_required = False
         self._section_bonus = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -67,10 +67,10 @@ class ClickableLabel(QLabel):
         self._bonus = marked
         self._apply_style()
 
-    def set_wr(self, marked: bool) -> None:
-        if self._wr == marked:
+    def set_comparison(self, marked: bool) -> None:
+        if self._comparison == marked:
             return
-        self._wr = marked
+        self._comparison = marked
         self._apply_style()
 
     def set_section_state(self, required: bool, bonus: bool) -> None:
@@ -89,8 +89,8 @@ class ClickableLabel(QLabel):
 
         if self._caught:
             if self._bonus and not self._evolved:
-                if self._wr:
-                    color = LABEL_COLOR_WR_AND_PLAYER
+                if self._comparison:
+                    color = LABEL_COLOR_COMPARISON_AND_PLAYER
                 else:
                     color = LABEL_COLOR_BONUS
             else:
@@ -99,8 +99,8 @@ class ClickableLabel(QLabel):
             color = LABEL_COLOR_IGNORED
         elif self._section_required:
             color = LABEL_COLOR_SECTION_REQUIRED
-        elif self._wr:
-            color = LABEL_COLOR_WR_ONLY
+        elif self._comparison:
+            color = LABEL_COLOR_COMPARISON_ONLY
         elif self._section_bonus:
             color = LABEL_COLOR_SECTION_BONUS
 

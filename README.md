@@ -65,21 +65,24 @@ The current section colors uncaught icons as follows:
 - **Black** — obtained normally.
 
 The first list must be entirely obtained (or ignored) before the next section
-becomes active. The existing WR comparison can still add its own colors:
+becomes active. The selected comparison can still add its own colors:
 
-- **Blue** — on the WR route for a section you've already reached, but not caught yet. In other words, the WR run would have it by now and you don't. These accumulate as the run progresses, so one missed in its own section stays flagged.
-- **Black** — caught, and on the WR route.
-- **Green** — caught, but not on the WR route in any section reached so far.
+- **Blue** — on the selected comparison route for a section you've already reached, but not caught yet. In other words, that run would have it by now and you don't. These accumulate as the run progresses, so one missed in its own section stays flagged.
+- **Black** — caught, and on the selected comparison route.
+- **Green** — caught, but not on the selected comparison route in any section reached so far.
 - **Red** — caught in the wild and listed as a bonus. This wins over black and green, so a bonus stands out whether or not it's on the route. Every bonus is an evolved form, so *evolving* into one is the ordinary path and doesn't count — only the wild catch turns it red.
 
-Resetting the counter clears the accumulated blue marks so the next run re-earns them section by section. Bonus highlighting is a fixed list, so it just stays on.
+Resetting the counter clears the accumulated comparison marks so the next run re-earns them section by section. Bonus highlighting is a fixed list, so it just stays on.
 
-The WR route is bundled as `resources/comparison/WR.json`; if it's missing or unreadable, "Compare to WR?" simply has nothing to mark. The route file, rather than `roi_config.py`, is the source of section and
-bonus data.
+Comparison JSON files in `resources/comparison/` are listed in the settings
+dropdown when they contain valid section-to-Pokémon data. A packaged build
+also scans the `comparison/` folder next to the executable, where a same-named
+file is shown as a separate selectable entry. Choose **None** to disable
+comparison colors.
 
 ### Personal best
 
-When a run reaches all 151, resetting the counter or closing the app asks whether to save it as your personal best. Saving writes `comparison/PB.json` — next to the `.exe` when running the packaged build — recording which Pokémon were caught in which section, in the same shape as the bundled `WR.json`.
+When a run reaches all 151, resetting the counter or closing the app asks whether to save it as your personal best. Saving writes `comparison/PB.json` — next to the `.exe` when running the packaged build — recording which Pokémon were caught in which section. The comparison dropdown refreshes after the save.
 
 ## Setup (for development)
 
@@ -130,7 +133,7 @@ src/pokedex_counter/
     detection_service.py      Per-frame catch/evolve/text detection
     route_service.py          Loads and validates route.json or route.txt
     template_service.py       Loads sprite template images
-    wr_service.py             Loads the world-record route from WR.json
+    comparison_service.py     Loads valid comparison routes from JSON files
     pb_service.py             Saves a completed run to PB.json
   vision/template_matching.py Multi-scale template matching helper
   ui/widgets/
