@@ -28,6 +28,7 @@ class SpriteStrip(QWidget):
         self._folder = folder
         self._sprite_width = sprite_size
         self._sprite_height = sprite_size
+        self._sprite_padding = 0
         self._labels_by_name: dict[str, ClickableLabel] = {}
         self._pixmap_cache: dict[Path, QPixmap] = {}
 
@@ -36,6 +37,18 @@ class SpriteStrip(QWidget):
         self.reload()
 
     def reload(self) -> None:
+        previous_states = {
+            name: (
+                label._caught,
+                label._evolved,
+                label._ignored,
+                label._bonus,
+                label._wr,
+                label._section_required,
+                label._section_bonus,
+            )
+            for name, label in self._labels_by_name.items()
+        }
         while self._layout.count():
             item = self._layout.takeAt(0)
             widget = item.widget()
@@ -55,7 +68,21 @@ class SpriteStrip(QWidget):
             label = self._make_sprite_label(path)
             name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
             self._labels_by_name[name] = label
+            state = previous_states.get(name)
+            if state is not None:
+                caught, evolved, ignored, bonus, wr, section_required, section_bonus = state
+                label.set_caught(caught, evolved)
+                label.set_ignored(ignored)
+                label.set_bonus(bonus)
+                label.set_wr(wr)
+                label.set_section_state(section_required, section_bonus)
             self._layout.addWidget(label)
+
+    def set_folder(self, folder: Path) -> None:
+        if folder == self._folder:
+            return
+        self._folder = folder
+        self.reload()
 
     @staticmethod
     def natural_key(path):
@@ -77,6 +104,7 @@ class SpriteStrip(QWidget):
         label = ClickableLabel(path)
         label.setToolTip(path.name)
         label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        label.set_padding(self._sprite_padding)
 
         self._draw_image_in_label(label)
 
@@ -127,6 +155,7 @@ class SpriteStrip(QWidget):
             self._draw_image_in_label(label)
 
     def set_sprite_padding(self, padding) -> None:
+        self._sprite_padding = padding
         for label in self._labels_by_name.values():
             label.set_padding(padding)
             self._draw_image_in_label(label)

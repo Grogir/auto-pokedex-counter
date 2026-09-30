@@ -19,7 +19,12 @@ from pokedex_counter.app import (
     wire_ui_settings,
 )
 from pokedex_counter.boxes_window import BoxesWindow
-from pokedex_counter.config import LABEL_COLOR_BONUS, LABEL_COLOR_CATCH, SPRITES_DIR
+from pokedex_counter.config import (
+    LABEL_COLOR_BONUS,
+    LABEL_COLOR_CATCH,
+    SPRITES_DIR,
+    SPRITES_DIRS,
+)
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES
@@ -195,6 +200,25 @@ def test_detection_type_preference_is_restored_and_saved(wired, qtbot, tmp_path)
     assert settings.detection_type_combo.currentData() == DETECTION_TYPE["SPRITE"]
     settings.detection_type_combo.setCurrentIndex(0)
     assert prefs.value("detection_type") == DETECTION_TYPE["NONE"]
+
+
+def test_sprite_set_preference_updates_both_windows_and_is_saved(wired, qtbot, tmp_path):
+    settings, window = wired
+    boxes = BoxesWindow()
+    prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    prefs.setValue("sprite_set", 1)
+
+    wire_ui_settings(settings, window, boxes)
+    wire_preferences(settings, window, boxes, prefs, QApplication.instance())
+
+    assert window.sprite_strip._folder == SPRITES_DIRS[0]
+    assert boxes._sprites_dir == SPRITES_DIRS[0]
+
+    settings.sprite_set_combo.setCurrentIndex(settings.sprite_set_combo.findData(2))
+
+    assert window.sprite_strip._folder == SPRITES_DIRS[1]
+    assert boxes._sprites_dir == SPRITES_DIRS[1]
+    assert prefs.value("sprite_set", type=int) == 2
 
 
 # --- found pokemon ---

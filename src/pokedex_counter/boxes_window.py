@@ -127,6 +127,12 @@ class BoxesWindow(QWidget):
     def set_sprite_size(self, size: int) -> None:
         self.set_sprite_dimensions(size, size)
 
+    def set_sprites_dir(self, sprites_dir: Path) -> None:
+        if sprites_dir == self._sprites_dir:
+            return
+        self._sprites_dir = sprites_dir
+        self._update_rows()
+
     def set_sprite_dimensions(self, width: int, height: int) -> None:
         self._sprite_width = width
         self._sprite_height = height

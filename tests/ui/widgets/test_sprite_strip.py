@@ -21,6 +21,7 @@ from pokedex_counter.config import (
     LABEL_COLOR_WR_AND_PLAYER,
     LABEL_COLOR_WR_ONLY,
     SPRITES_DIR,
+    SPRITES_DIRS,
 )
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.ui.widgets import sprite_strip as sprite_strip_module
@@ -103,6 +104,24 @@ def test_reload_reuses_cached_pixmaps(qtbot, monkeypatch):
 
     assert first_load_count > 0
     assert len(loaded_paths) == first_load_count
+
+
+def test_switching_sprite_folder_reloads_images_and_preserves_label_state(sprite_strip):
+    sprite_strip.set_sprite_dimensions(40, 30)
+    sprite_strip.set_sprite_padding(4)
+    sprite_strip.set_bonus_names({"BULBASAUR"})
+    sprite_strip.set_wr_names({"BULBASAUR"})
+    sprite_strip.set_current_section({"BULBASAUR"}, set())
+    sprite_strip.pokemon_found("BULBASAUR")
+
+    sprite_strip.set_folder(SPRITES_DIRS[0])
+
+    label = sprite_strip._labels_by_name["BULBASAUR"]
+    assert label._path.parent == SPRITES_DIRS[0]
+    assert label._caught
+    assert label._bonus and label._wr and label._section_required
+    assert label.size().width() == 48
+    assert label.size().height() == 38
 
 
 # --- WR comparison colors ---

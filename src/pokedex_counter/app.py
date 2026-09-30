@@ -11,7 +11,12 @@ from pokedex_counter.calibration_runner import (
     save_calibration_results,
 )
 from pokedex_counter.camera import resolve_camera_index
-from pokedex_counter.config import APP_NAME, DETECTION_IMAGE_DIR, ORGANIZATION_NAME
+from pokedex_counter.config import (
+    APP_NAME,
+    DETECTION_IMAGE_DIR,
+    ORGANIZATION_NAME,
+    SPRITES_DIRS,
+)
 from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES, ROUTE_SECTIONS
@@ -138,6 +143,16 @@ def wire_preferences(settings: SettingsWindow,
         lambda type: prefs.setValue("detection_type", type)
     )
 
+    sprite_set = prefs.value(
+        "sprite_set", settings.sprite_set_combo.currentData(), type=int
+    )
+    sprite_set_index = settings.sprite_set_combo.findData(sprite_set)
+    if sprite_set_index >= 0:
+        settings.sprite_set_combo.setCurrentIndex(sprite_set_index)
+    settings.sprite_set_combo.currentIndexChanged.connect(
+        lambda _: prefs.setValue("sprite_set", settings.sprite_set_combo.currentData())
+    )
+
     window.move(prefs.value("window_position", QPoint(10, 10)))
     app.aboutToQuit.connect(lambda: prefs.setValue("window_position", window.pos()))
     boxes_window.move(prefs.value("boxes_window_position", QPoint(10, 530)))
@@ -221,6 +236,16 @@ def wire_detection(controller: GameController,
 def wire_ui_settings(settings: SettingsWindow,
                      window: MainWindow,
                      boxes_window: BoxesWindow) -> None:
+    def apply_sprite_set(sprite_set: int) -> None:
+        sprites_dir = SPRITES_DIRS[sprite_set - 1]
+        window.sprite_strip.set_folder(sprites_dir)
+        boxes_window.set_sprites_dir(sprites_dir)
+
+    settings.sprite_set_combo.currentIndexChanged.connect(
+        lambda _: apply_sprite_set(settings.sprite_set_combo.currentData())
+    )
+    apply_sprite_set(settings.sprite_set_combo.currentData())
+
     settings.columns_spinbox.valueChanged.connect(window.set_sprites_per_row)
     window.set_sprites_per_row(settings.columns_spinbox.value())
 

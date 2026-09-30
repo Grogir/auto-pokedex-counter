@@ -138,7 +138,7 @@ src/pokedex_counter/
     clickable_label.py        One sprite: click to toggle, paints its highlight
     flow_layout.py            Wrapping grid layout the strip is built on
   resources/
-    sprites/, sprites_background/   Per-Pokemon template images
+    sprites_*/, detection/   Per-Pokemon template images
     calibration/                    Title-screen reference crops
     comparison/WR.json              World-record route, by section
     fonts/                          Pokemon display fonts for the counter

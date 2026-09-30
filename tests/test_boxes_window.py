@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 
 import pokedex_counter.boxes_window as boxes_module
 from pokedex_counter.boxes_window import BOX_SIZE, TEAM_SIZE, BoxesWindow
-from pokedex_counter.config import SPRITES_DIR
+from pokedex_counter.config import SPRITES_DIR, SPRITES_DIRS
 from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
 
 
@@ -123,6 +123,19 @@ def test_rectangular_dimensions_resize_existing_box_icon(qtbot, monkeypatch):
 
     assert icon.size().width() == 40
     assert icon.size().height() == 30
+
+
+def test_switching_sprite_folder_redraws_existing_icons(qtbot):
+    window = BoxesWindow(SPRITES_DIR)
+    qtbot.addWidget(window)
+    window.pokemon_found("BULBASAUR")
+    icon = window._rows[0][2][0].layout().itemAt(0).widget()
+
+    window.set_sprites_dir(SPRITES_DIRS[0])
+
+    assert window._sprites_dir == SPRITES_DIRS[0]
+    assert icon.property("pokemon_name") == "BULBASAUR"
+    assert icon.pixmap() is not None
 
 
 def test_padding_expands_existing_box_icon_label(qtbot, monkeypatch):

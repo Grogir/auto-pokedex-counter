@@ -50,3 +50,9 @@ def test_bottom_margin_spinbox_is_labeled_and_starts_at_zero(settings):
     assert settings.bottom_margin_spinbox.value() == 0
     assert settings.bottom_margin_spinbox.minimum() == 0
 
+
+def test_sprite_set_dropdown_lists_all_three_sets_and_defaults(settings):
+    assert label_for(settings, settings.sprite_set_combo) == "Sprite set:"
+    assert [settings.sprite_set_combo.itemData(index) for index in range(settings.sprite_set_combo.count())] == [1, 2, 3]
+    assert settings.sprite_set_combo.currentData() == 2
+

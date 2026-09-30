@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pokedex_counter.config import APP_NAME
+from pokedex_counter.config import APP_NAME, SPRITES_DIR, SPRITES_DIRS
 from pokedex_counter.detection_config import DETECTION_TYPE
 
 DEFAULT_SPRITES_PER_ROW = 10
@@ -72,6 +72,12 @@ class SettingsWindow(QWidget):
         self.bottom_margin_spinbox.setRange(0, 200)
         self.bottom_margin_spinbox.setValue(DEFAULT_BOTTOM_MARGIN)
         form.addRow("Bottom margin:", self.bottom_margin_spinbox)
+
+        self.sprite_set_combo = QComboBox()
+        for sprite_set, folder in enumerate(SPRITES_DIRS, start=1):
+            self.sprite_set_combo.addItem(folder.name.replace("_", " ").title(), sprite_set)
+        self.sprite_set_combo.setCurrentIndex(self.sprite_set_combo.findData(SPRITES_DIRS.index(SPRITES_DIR) + 1))
+        form.addRow("Sprite set:", self.sprite_set_combo)
 
         self.detection_type_combo = QComboBox()
         self.detection_type_combo.addItem("No detection", DETECTION_TYPE["NONE"])
