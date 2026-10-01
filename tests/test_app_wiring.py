@@ -13,8 +13,10 @@ import pytest
 from PySide6.QtCore import QObject, QSettings, Qt, Signal
 from PySide6.QtWidgets import QApplication
 
+from pokedex_counter.afo_window import AVERAGE_EVO_TIME, AfoWindow
 from pokedex_counter.app import (
     maybe_prompt_save_pb,
+    reset_run,
     wire_comparison,
     wire_detection,
     wire_preferences,
@@ -66,7 +68,7 @@ def wired(qtbot):
 
 def test_checking_the_box_highlights_bonuses(wired):
     settings, window = wired
-    wire_ui_settings(settings, window, BoxesWindow())
+    wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
     window.sprite_strip.pokemon_found(pokemon)
 
@@ -84,7 +86,7 @@ def test_a_restored_checked_setting_applies_without_a_toggle(wired):
     settings, window = wired
     settings.highlight_bonuses_checkbox.setChecked(True)  # as restored from QSettings
 
-    wire_ui_settings(settings, window, BoxesWindow())
+    wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
     window.sprite_strip.pokemon_found(pokemon)
 
@@ -94,7 +96,7 @@ def test_a_restored_checked_setting_applies_without_a_toggle(wired):
 def test_starts_off_when_the_setting_is_off(wired):
     settings, window = wired
 
-    wire_ui_settings(settings, window, BoxesWindow())
+    wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
     window.sprite_strip.pokemon_found(pokemon)
 
@@ -103,7 +105,7 @@ def test_starts_off_when_the_setting_is_off(wired):
 
 def test_bottom_margin_setting_updates_main_window_height(wired):
     settings, window = wired
-    wire_ui_settings(settings, window, BoxesWindow())
+    wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
 
     settings.bottom_margin_spinbox.setValue(23)
 
@@ -117,7 +119,7 @@ def test_detection_type_updates_detector_and_counter_calibration_state(wired, qt
     capture = _IdleCaptureService()
     wire_detection(
         GameController(), detector, capture, CalibrationService(), window,
-        BoxesWindow(), settings,
+        BoxesWindow(), settings, AfoWindow()
     )
 
     assert detector._detection_type == DETECTION_TYPE["TEXT"]
@@ -163,7 +165,7 @@ def test_capture_follows_detection_mode_and_stays_active_during_none_calibration
     calibration = CalibrationService(capture)
     apply_detection_type = wire_detection(
         GameController(), DetectionService(), capture, calibration, window,
-        BoxesWindow(), settings,
+        BoxesWindow(), settings, AfoWindow()
     )
 
     assert capture.starts == 0
@@ -193,12 +195,51 @@ def test_capture_follows_detection_mode_and_stays_active_during_none_calibration
     assert capture.stops == stops_before_calibration + 1
 
 
+def test_afo_predictor_receives_found_and_uncaught_signals(wired, qtbot):
+    settings, window = wired
+    controller = GameController()
+    boxes = BoxesWindow()
+    afo_window = AfoWindow(controller.current_section)
+    qtbot.addWidget(boxes)
+    qtbot.addWidget(afo_window)
+    wire_detection(
+        controller, DetectionService(), _IdleCaptureService(), CalibrationService(),
+        window, boxes, settings, afo_window,
+    )
+
+    controller.pokemon_found.emit("RAPIDASH", True)
+    assert afo_window.evo_time["PONYTA"] == 0
+
+    window.sprite_strip.sprite_uncaught.emit("RAPIDASH")
+    assert afo_window.evo_time["PONYTA"] == AVERAGE_EVO_TIME["PONYTA"]
+
+
+def test_reset_run_resets_afo_predictor(wired, qtbot):
+    _, window = wired
+    controller = GameController()
+    detector = DetectionService()
+    boxes = BoxesWindow()
+    afo_window = AfoWindow(controller.current_section)
+    qtbot.addWidget(boxes)
+    qtbot.addWidget(afo_window)
+    afo_window.pokemon_found("RAPIDASH", evolved=True)
+    sections_applied = []
+
+    reset_run(
+        controller, detector, window, boxes, sections_applied.append,
+        lambda: None, afo_window,
+    )
+
+    assert afo_window.evo_time == AVERAGE_EVO_TIME
+    assert sections_applied == [0]
+
+
 def test_detection_type_preference_is_restored_and_saved(wired, qtbot, tmp_path):
     settings, window = wired
     prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     prefs.setValue("detection_type", DETECTION_TYPE["SPRITE"])
 
-    wire_preferences(settings, window, BoxesWindow(), prefs, QApplication.instance())
+    wire_preferences(settings, window, BoxesWindow(), AfoWindow(), prefs, QApplication.instance())
 
     assert settings.detection_type_combo.currentData() == DETECTION_TYPE["SPRITE"]
     settings.detection_type_combo.setCurrentIndex(0)
@@ -211,8 +252,8 @@ def test_sprite_set_preference_updates_both_windows_and_is_saved(wired, qtbot, t
     prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     prefs.setValue("sprite_set", 1)
 
-    wire_ui_settings(settings, window, boxes)
-    wire_preferences(settings, window, boxes, prefs, QApplication.instance())
+    wire_ui_settings(settings, window, boxes, AfoWindow())
+    wire_preferences(settings, window, boxes, AfoWindow(), prefs, QApplication.instance())
 
     assert window.sprite_strip._folder == SPRITES_DIRS[0]
     assert boxes._sprites_dir == SPRITES_DIRS[0]
@@ -231,11 +272,39 @@ def test_comparison_preference_is_restored_and_saved(wired, tmp_path):
     prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     prefs.setValue("comparison", "external:PB.json")
 
-    wire_preferences(settings, window, BoxesWindow(), prefs, QApplication.instance())
+    wire_preferences(settings, window, BoxesWindow(), AfoWindow(), prefs, QApplication.instance())
 
     assert settings.comparison_combo.currentData() == "external:PB.json"
     settings.comparison_combo.setCurrentIndex(1)
     assert prefs.value("comparison") == "bundled:WR.json"
+
+
+def test_afo_settings_are_restored_saved_and_update_predictor(wired, qtbot, tmp_path):
+    settings, window = wired
+    boxes = BoxesWindow()
+    afo_window = AfoWindow()
+    qtbot.addWidget(boxes)
+    qtbot.addWidget(afo_window)
+    prefs = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    prefs.setValue("afo_comparison_seconds", 125)
+    prefs.setValue("afo_multiplier", 1.2)
+
+    wire_ui_settings(settings, window, boxes, afo_window)
+    wire_preferences(settings, window, boxes, AfoWindow(), prefs, QApplication.instance())
+
+    comparison_time = settings.afo_comparison_time_edit.time()
+    assert (comparison_time.minute(), comparison_time.second()) == (2, 5)
+    assert afo_window._comparison_seconds == 125
+    assert settings.afo_multiplier_spinbox.value() == 1.2
+    assert afo_window._multiplier_percent == 1.2
+
+    settings.afo_comparison_time_edit.setTime(settings.afo_comparison_time_edit.time().fromString("00:33", "mm:ss"))
+    settings.afo_multiplier_spinbox.setValue(0.3)
+
+    assert prefs.value("afo_comparison_seconds", type=int) == 33
+    assert prefs.value("afo_multiplier", type=float) == 0.3
+    assert afo_window._comparison_seconds == 33
+    assert afo_window._multiplier_percent == 0.3
 
 
 def test_comparison_selection_updates_sprite_marks(wired, monkeypatch):
@@ -302,7 +371,7 @@ def found_wiring(qtbot):
     qtbot.addWidget(boxes)
     wire_detection(
         controller, DetectionService(), _IdleCaptureService(), CalibrationService(),
-        window, boxes, SettingsWindow(),
+        window, boxes, SettingsWindow(), AfoWindow()
     )
     return controller, window, boxes
 
@@ -362,7 +431,7 @@ def test_manual_sprite_click_and_unclick_reaches_boxes(qtbot):
     qtbot.addWidget(boxes)
     wire_detection(
         controller, DetectionService(), _IdleCaptureService(), CalibrationService(),
-        window, boxes, SettingsWindow(),
+        window, boxes, SettingsWindow(), AfoWindow()
     )
     label = window.sprite_strip._labels_by_name["BULBASAUR"]
 

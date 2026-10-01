@@ -9,9 +9,11 @@ app.py, matching the existing convention there.
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFormLayout,
     QPushButton,
     QSpinBox,
+    QTimeEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -89,6 +91,17 @@ class SettingsWindow(QWidget):
         self.comparison_combo = QComboBox()
         self.comparison_combo.addItem("None", None)
         form.addRow("Compare to:", self.comparison_combo)
+
+        self.afo_comparison_time_edit = QTimeEdit()
+        self.afo_comparison_time_edit.setDisplayFormat("mm:ss")
+        form.addRow("AFO comparison:", self.afo_comparison_time_edit)
+
+        self.afo_multiplier_spinbox = QDoubleSpinBox()
+        self.afo_multiplier_spinbox.setRange(-50.0, 50.0)
+        self.afo_multiplier_spinbox.setDecimals(1)
+        self.afo_multiplier_spinbox.setSingleStep(0.1)
+        self.afo_multiplier_spinbox.setSuffix("%")
+        form.addRow("AFO modifier:", self.afo_multiplier_spinbox)
 
         self.highlight_bonuses_checkbox = QCheckBox()
         form.addRow("Highlight bonuses", self.highlight_bonuses_checkbox)

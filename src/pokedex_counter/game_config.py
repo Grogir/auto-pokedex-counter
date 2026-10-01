@@ -90,6 +90,6 @@ FINAL_SECTION = _final_section_mons()
 # is_evolution() uses the route metadata to tell the two apart.
 BONUSES: set[str] = {
     "RATICATE", "RAICHU", "SANDSLASH", "WIGGLYTUFF", "GOLBAT", "PARASECT",
-    "VENOMOTH", "GOLDUCK", "KADABRA", "MACHOKE", "GRAVELER", "DODRIO", "DEWGONG", "MUK",
-    "HYPNO", "KINGLER", "ELECTRODE", "MAROWAK", "RHYDON"
+    "VENOMOTH", "GOLDUCK", "KADABRA", "MACHOKE", "GRAVELER", "DODRIO",
+    "DEWGONG", "MUK", "HYPNO", "KINGLER", "ELECTRODE", "MAROWAK", "RHYDON"
 }

@@ -26,7 +26,7 @@ def test_highlight_bonuses_checkbox_is_labeled_and_starts_off(settings):
 
 
 def test_comparison_dropdown_starts_with_none(settings):
-    assert label_for(settings, settings.comparison_combo) == "Comparison:"
+    assert label_for(settings, settings.comparison_combo) == "Compare to:"
     assert settings.comparison_combo.itemText(0) == "None"
     assert settings.comparison_combo.currentData() is None
 
@@ -49,6 +49,13 @@ def test_bottom_margin_spinbox_is_labeled_and_starts_at_zero(settings):
     assert label_for(settings, settings.bottom_margin_spinbox) == "Bottom margin:"
     assert settings.bottom_margin_spinbox.value() == 0
     assert settings.bottom_margin_spinbox.minimum() == 0
+
+
+def test_afo_comparison_and_multiplier_controls(settings):
+    assert settings.afo_comparison_time_edit.displayFormat() == "mm:ss"
+    assert settings.afo_multiplier_spinbox.value() == 0
+    assert settings.afo_multiplier_spinbox.singleStep() == 0.1
+    assert settings.afo_multiplier_spinbox.decimals() == 1
 
 
 def test_sprite_set_dropdown_lists_all_three_sets_and_defaults(settings):

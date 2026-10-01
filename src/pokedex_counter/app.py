@@ -2,9 +2,11 @@ from PySide6.QtCore import (
     QPoint,
     QSettings,
     Qt,
+    QTime,
 )
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from pokedex_counter.afo_window import AfoWindow
 from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.calibration_runner import (
     run_calibration,
@@ -50,22 +52,24 @@ def run() -> int:
     # --- UI ---
     window = MainWindow()
     boxes_window = BoxesWindow()
+    afo_window = AfoWindow(controller.current_section)
     settings = SettingsWindow()
     controller.count_changed.connect(window._update_counter)
     window.set_count_provider(controller.current_count)
     window.close_requested.connect(app.quit)
-    wire_ui_settings(settings, window, boxes_window)
+    wire_ui_settings(settings, window, boxes_window, afo_window)
     apply_section, refresh_comparisons = wire_comparison(
         controller, settings, window.sprite_strip
     )
 
     # --- persisted settings ---
     prefs = QSettings(ORGANIZATION_NAME, APP_NAME)
-    wire_preferences(settings, window, boxes_window, prefs, app)
+    wire_preferences(settings, window, boxes_window, afo_window, prefs, app)
 
     # --- event wiring ---
     apply_detection_type = wire_detection(
-        controller, detector, capture, calibration, window, boxes_window, settings
+        controller, detector, capture, calibration, window, boxes_window, settings,
+        afo_window,
     )
     app.aboutToQuit.connect(capture.shutdown)
 
@@ -75,7 +79,7 @@ def run() -> int:
     settings.reset_button.clicked.connect(
         lambda: reset_run(
             controller, detector, window, boxes_window, apply_section,
-            refresh_comparisons,
+            refresh_comparisons, afo_window,
         )
     )
 
@@ -104,6 +108,7 @@ def run() -> int:
     # --- start ---
     window.show()
     boxes_window.show()
+    afo_window.show()
     settings.move(window.x() + window.frameGeometry().width() + 10, window.y())
     settings.show()
 
@@ -113,6 +118,7 @@ def run() -> int:
 def wire_preferences(settings: SettingsWindow,
                      window: MainWindow,
                      boxes_window: BoxesWindow,
+                     afo_window: AfoWindow,
                      prefs: QSettings,
                      app: QApplication) -> None:
     for key, spinbox in (
@@ -138,6 +144,24 @@ def wire_preferences(settings: SettingsWindow,
         checkbox.toggled.connect(
             lambda checked, setting_key=key: prefs.setValue(setting_key, checked)
         )
+
+    comparison_seconds = max(
+        0, min(int(prefs.value("afo_comparison_seconds", 0)), 59 * 60 + 59)
+    )
+    settings.afo_comparison_time_edit.setTime(
+        QTime(0, comparison_seconds // 60, comparison_seconds % 60)
+    )
+    settings.afo_comparison_time_edit.timeChanged.connect(
+        lambda time: prefs.setValue(
+            "afo_comparison_seconds", time.minute() * 60 + time.second()
+        )
+    )
+
+    multiplier = float(prefs.value("afo_multiplier", 0.0))
+    settings.afo_multiplier_spinbox.setValue(multiplier)
+    settings.afo_multiplier_spinbox.valueChanged.connect(
+        lambda value: prefs.setValue("afo_multiplier", value)
+    )
 
     comparison = prefs.value("comparison", settings.comparison_combo.currentData())
     comparison_index = settings.comparison_combo.findData(comparison)
@@ -169,6 +193,8 @@ def wire_preferences(settings: SettingsWindow,
     app.aboutToQuit.connect(lambda: prefs.setValue("window_position", window.pos()))
     boxes_window.move(prefs.value("boxes_window_position", QPoint(10, 530)))
     app.aboutToQuit.connect(lambda: prefs.setValue("boxes_window_position", boxes_window.pos()))
+    afo_window.move(prefs.value("afo_window_position", QPoint(220, 530)))
+    app.aboutToQuit.connect(lambda: prefs.setValue("afo_window_position", afo_window.pos()))
 
 
 def wire_comparison(controller: GameController,
@@ -221,13 +247,16 @@ def wire_detection(controller: GameController,
                    calibration: CalibrationService,
                    window: MainWindow,
                    boxes_window: BoxesWindow,
-                   settings: SettingsWindow):
+                   settings: SettingsWindow,
+                   afo_window: AfoWindow):
     capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
 
     sprite_strip = window.sprite_strip
     detector.detection.connect(controller.on_detection)
     controller.pokemon_found.connect(sprite_strip.pokemon_found)
     controller.pokemon_found.connect(boxes_window.pokemon_found)
+    controller.pokemon_found.connect(afo_window.pokemon_found)
+    sprite_strip.sprite_uncaught.connect(afo_window.sprite_uncaught)
 
     sprite_strip.sprite_caught.connect(controller.on_detection)
     sprite_strip.sprite_caught.connect(detector.select)
@@ -263,7 +292,8 @@ def wire_detection(controller: GameController,
 
 def wire_ui_settings(settings: SettingsWindow,
                      window: MainWindow,
-                     boxes_window: BoxesWindow) -> None:
+                     boxes_window: BoxesWindow,
+                     afo_window: AfoWindow) -> None:
     def apply_sprite_set(sprite_set: int) -> None:
         sprites_dir = SPRITES_DIRS[sprite_set - 1]
         window.sprite_strip.set_folder(sprites_dir)
@@ -327,18 +357,34 @@ def wire_ui_settings(settings: SettingsWindow,
     settings.highlight_bonuses_checkbox.toggled.connect(apply_bonuses)
     apply_bonuses(settings.highlight_bonuses_checkbox.isChecked())
 
+    settings.afo_comparison_time_edit.timeChanged.connect(
+        lambda time: afo_window.set_afo_comparison(
+            time.minute() * 60 + time.second()
+        )
+    )
+    settings.afo_multiplier_spinbox.valueChanged.connect(
+        afo_window.set_afo_multiplier
+    )
+    comparison_time = settings.afo_comparison_time_edit.time()
+    afo_window.set_afo_comparison(
+        comparison_time.minute() * 60 + comparison_time.second()
+    )
+    afo_window.set_afo_multiplier(settings.afo_multiplier_spinbox.value())
+
 
 def reset_run(controller: GameController,
               detector: DetectionService,
               window: MainWindow,
               boxes_window: BoxesWindow,
               apply_section,
-              refresh_comparisons):
+              refresh_comparisons,
+              afo_window: AfoWindow):
     maybe_prompt_save_pb(controller, window, refresh_comparisons)
     controller.reset()
     detector.reset()
     window.sprite_strip.reset()
     boxes_window.reset()
+    afo_window.reset()
     apply_section(0)
 
 
