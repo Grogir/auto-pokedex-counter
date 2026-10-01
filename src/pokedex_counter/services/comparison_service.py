@@ -2,8 +2,8 @@ import json
 from dataclasses import dataclass
 
 from pokedex_counter.config import COMPARISON_DIRS
-from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.game_config import BONUSES, ROUTE_SECTIONS
+from pokedex_counter.game_controller import GameController
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ def _cumulated_bonuses(raw: dict[str, list[str]]) -> dict[int, set[str]]:
     controller = GameController()
     for names in raw.values():
         for name in names:
-            controller.on_detection(name)
+            controller.on_caught(name)
 
     sections = {}
     for section in range(len(ROUTE_SECTIONS)):

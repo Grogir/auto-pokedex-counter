@@ -96,8 +96,8 @@ class CalibrationService(QObject):
             if confident:
                 x, y, w, h = best_box
                 cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(display, f"{name}: {best_val:.2f}", (x, max(y - 8, 12)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(display, f"{name}: {best_val:.2f}", (x, max(y - 8, 22)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
                 streak = self.candidates.get(name)
                 if streak is None or not _boxes_close(
                     best_box, streak[1], self.position_tolerance
@@ -121,8 +121,8 @@ class CalibrationService(QObject):
                     x, y, w, h = best_box
                     color = (0, 165, 255) if best_val >= self.lock_threshold else (0, 0, 255)
                     cv2.rectangle(display, (x, y), (x + w, y + h), color, 2)
-                    cv2.putText(display, f"{name}: {best_val:.2f} ({w}x{h})", (x, max(y - 8, 12)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    cv2.putText(display, f"{name}: {best_val:.2f} ({w}x{h})", (x, max(y - 8, 22)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
                 self.candidates.pop(name, None)
 
         for name in newly_locked:

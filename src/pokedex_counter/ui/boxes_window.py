@@ -34,7 +34,7 @@ class ClickableIcon(QLabel):
         super().mousePressEvent(event)
 
 class BoxesWindow(QWidget):
-    sprite_caught = Signal(str)
+    manual_caught = Signal(str)
 
     def __init__(
         self,
@@ -59,7 +59,7 @@ class BoxesWindow(QWidget):
         self._build_rows()
         self._update_rows()
 
-    def pokemon_found(self, name: str, evolved: bool = False) -> None:
+    def on_pokemon_found(self, name: str, evolved: bool = False) -> None:
         """Add a Pokemon to the team or boxes, if it is not already present. If it is an evolved form, replace the previous form in the team if present."""
         self._found.add(name)
 
@@ -117,7 +117,7 @@ class BoxesWindow(QWidget):
         self._found = set()
         self._update_rows()
 
-    def remove_pokemon(self, name: str) -> None:
+    def on_manual_uncaught(self, name: str) -> None:
         """Remove every occurrence of `name` from the team and all boxes."""
         self._found.discard(name)
         for box in self.boxes:
@@ -227,7 +227,7 @@ class BoxesWindow(QWidget):
             evolutions = evolutions_of(icon.property("pokemon_name") or "")
             for evo in evolutions:
                 if evo not in self._found:
-                    self.sprite_caught.emit(evo)
+                    self.manual_caught.emit(evo)
                     break
 
     def _update_rows(self) -> None:

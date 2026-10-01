@@ -13,7 +13,6 @@ import pytest
 from PySide6.QtCore import QObject, QSettings, Qt, Signal
 from PySide6.QtWidgets import QApplication
 
-from pokedex_counter.afo_window import AVERAGE_EVO_TIME, AfoWindow
 from pokedex_counter.app import (
     maybe_prompt_save_pb,
     reset_run,
@@ -22,21 +21,22 @@ from pokedex_counter.app import (
     wire_preferences,
     wire_ui_settings,
 )
-from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import (
     LABEL_COLOR_BONUS,
     LABEL_COLOR_CATCH,
     SPRITES_DIR,
     SPRITES_DIRS,
 )
-from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES
-from pokedex_counter.main_window import MainWindow
+from pokedex_counter.game_controller import GameController
 from pokedex_counter.services.calibration_service import CalibrationService
 from pokedex_counter.services.comparison_service import Comparison
 from pokedex_counter.services.detection_service import DetectionService
-from pokedex_counter.settings_window import SettingsWindow
+from pokedex_counter.ui.afo_window import AVERAGE_EVO_TIME, AfoWindow
+from pokedex_counter.ui.boxes_window import BoxesWindow
+from pokedex_counter.ui.main_window import MainWindow
+from pokedex_counter.ui.settings_window import SettingsWindow
 from tests.conftest import sections_for
 
 
@@ -70,7 +70,7 @@ def test_checking_the_box_highlights_bonuses(wired):
     settings, window = wired
     wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
-    window.sprite_strip.pokemon_found(pokemon)
+    window.sprite_strip.on_pokemon_found(pokemon)
 
     settings.highlight_bonuses_checkbox.setChecked(True)
     assert LABEL_COLOR_BONUS in window.sprite_strip._labels_by_name[pokemon].styleSheet()
@@ -88,7 +88,7 @@ def test_a_restored_checked_setting_applies_without_a_toggle(wired):
 
     wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
-    window.sprite_strip.pokemon_found(pokemon)
+    window.sprite_strip.on_pokemon_found(pokemon)
 
     assert LABEL_COLOR_BONUS in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
@@ -98,7 +98,7 @@ def test_starts_off_when_the_setting_is_off(wired):
 
     wire_ui_settings(settings, window, BoxesWindow(), AfoWindow())
     pokemon = next(iter(BONUSES))
-    window.sprite_strip.pokemon_found(pokemon)
+    window.sprite_strip.on_pokemon_found(pokemon)
 
     assert LABEL_COLOR_CATCH in window.sprite_strip._labels_by_name[pokemon].styleSheet()
 
@@ -210,7 +210,7 @@ def test_afo_predictor_receives_found_and_uncaught_signals(wired, qtbot):
     controller.pokemon_found.emit("RAPIDASH", True)
     assert afo_window.evo_time["PONYTA"] == 0
 
-    window.sprite_strip.sprite_uncaught.emit("RAPIDASH")
+    window.sprite_strip.manual_uncaught.emit("RAPIDASH")
     assert afo_window.evo_time["PONYTA"] == AVERAGE_EVO_TIME["PONYTA"]
 
 
@@ -222,7 +222,7 @@ def test_reset_run_resets_afo_predictor(wired, qtbot):
     afo_window = AfoWindow(controller.current_section)
     qtbot.addWidget(boxes)
     qtbot.addWidget(afo_window)
-    afo_window.pokemon_found("RAPIDASH", evolved=True)
+    afo_window.on_pokemon_found("RAPIDASH", evolved=True)
     sections_applied = []
 
     reset_run(
@@ -381,7 +381,7 @@ def test_a_wild_catch_reaches_the_strip_as_a_catch(found_wiring, qtbot):
     caught_in, _, _ = sections_for(BOTH_WAYS)
 
     controller.on_section_changed(caught_in)
-    controller.on_detection(BOTH_WAYS)
+    controller.on_caught(BOTH_WAYS)
 
     assert window.sprite_strip._labels_by_name[BOTH_WAYS]._caught
     assert not window.sprite_strip._labels_by_name[BOTH_WAYS]._evolved
@@ -394,7 +394,7 @@ def test_the_same_pokemon_reaches_the_strip_as_an_evolution_elsewhere(found_wiri
     _, evolved_in, _ = sections_for(BOTH_WAYS)
 
     controller.on_section_changed(evolved_in)
-    controller.on_detection(BOTH_WAYS)
+    controller.on_caught(BOTH_WAYS)
 
     assert window.sprite_strip._labels_by_name[BOTH_WAYS]._caught
     assert window.sprite_strip._labels_by_name[BOTH_WAYS]._evolved

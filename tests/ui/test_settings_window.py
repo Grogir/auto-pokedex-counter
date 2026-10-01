@@ -5,7 +5,7 @@ QSettings keys and the user expect, and starts in the right state."""
 import pytest
 from PySide6.QtWidgets import QFormLayout
 
-from pokedex_counter.settings_window import SettingsWindow
+from pokedex_counter.ui.settings_window import SettingsWindow
 
 
 @pytest.fixture

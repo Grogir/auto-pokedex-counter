@@ -6,31 +6,31 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from pokedex_counter.afo_window import AfoWindow
-from pokedex_counter.boxes_window import BoxesWindow
-from pokedex_counter.calibration_runner import (
-    run_calibration,
-    save_calibration_results,
-)
-from pokedex_counter.camera import resolve_camera_index
 from pokedex_counter.config import (
     APP_NAME,
     DETECTION_IMAGE_DIR,
     ORGANIZATION_NAME,
     SPRITES_DIRS,
 )
-from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.detection_config import DETECTION_TYPE
 from pokedex_counter.game_config import BONUSES, ROUTE_SECTIONS
-from pokedex_counter.main_window import MainWindow
+from pokedex_counter.game_controller import GameController
+from pokedex_counter.services.calibration_runner import (
+    run_calibration,
+    save_calibration_results,
+)
 from pokedex_counter.services.calibration_service import CalibrationService
+from pokedex_counter.services.camera_finder import resolve_camera_index
 from pokedex_counter.services.capture_service import CaptureService
 from pokedex_counter.services.comparison_service import load_comparisons
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.global_hotkey import GlobalHotkey
 from pokedex_counter.services.pb_service import save_pb
 from pokedex_counter.services.template_service import TemplateService
-from pokedex_counter.settings_window import SettingsWindow
+from pokedex_counter.ui.afo_window import AfoWindow
+from pokedex_counter.ui.boxes_window import BoxesWindow
+from pokedex_counter.ui.main_window import MainWindow
+from pokedex_counter.ui.settings_window import SettingsWindow
 from pokedex_counter.ui.widgets.sprite_strip import SpriteStrip
 
 
@@ -54,13 +54,11 @@ def run() -> int:
     boxes_window = BoxesWindow()
     afo_window = AfoWindow(controller.current_section)
     settings = SettingsWindow()
-    controller.count_changed.connect(window._update_counter)
+    controller.count_changed.connect(window.update_counter)
     window.set_count_provider(controller.current_count)
     window.close_requested.connect(app.quit)
     wire_ui_settings(settings, window, boxes_window, afo_window)
-    apply_section, refresh_comparisons = wire_comparison(
-        controller, settings, window.sprite_strip
-    )
+    apply_section, refresh_comparisons = wire_comparison(controller, settings, window.sprite_strip)
 
     # --- persisted settings ---
     prefs = QSettings(ORGANIZATION_NAME, APP_NAME)
@@ -68,38 +66,18 @@ def run() -> int:
 
     # --- event wiring ---
     apply_detection_type = wire_detection(
-        controller, detector, capture, calibration, window, boxes_window, settings,
-        afo_window,
+        controller, detector, capture, calibration, window, boxes_window, settings, afo_window
     )
     app.aboutToQuit.connect(capture.shutdown)
-
     app.aboutToQuit.connect(
         lambda: maybe_prompt_save_pb(controller, window, refresh_comparisons)
     )
     settings.reset_button.clicked.connect(
-        lambda: reset_run(
-            controller, detector, window, boxes_window, apply_section,
-            refresh_comparisons, afo_window,
-        )
+        lambda: reset_run(controller, detector, window, boxes_window, apply_section, refresh_comparisons, afo_window)
     )
 
     # --- calibration ---
-    def on_calibrate_clicked() -> None:
-        if not calibration.active:
-            capture.frame_ready.disconnect(detector.process_frame)
-            if not capture.running:
-                capture.start()
-            run_calibration(calibration)
-
-    def on_calibration_finished(results) -> None:
-        save_calibration_results(results)
-        if results.get("GAME_AREA") is not None:
-            detector.update_game_area(results["GAME_AREA"])
-        apply_detection_type()
-        capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
-
-    settings.calibrate_button.clicked.connect(on_calibrate_clicked)
-    calibration.finished.connect(on_calibration_finished, Qt.ConnectionType.QueuedConnection)
+    wire_calibration(capture, calibration, detector, settings, apply_detection_type)
 
     # --- keybinds ---
     global_backspace = GlobalHotkey(0x08, controller.force_detect_current_section)
@@ -252,24 +230,24 @@ def wire_detection(controller: GameController,
     capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
 
     sprite_strip = window.sprite_strip
-    detector.detection.connect(controller.on_detection)
-    controller.pokemon_found.connect(sprite_strip.pokemon_found)
-    controller.pokemon_found.connect(boxes_window.pokemon_found)
-    controller.pokemon_found.connect(afo_window.pokemon_found)
-    sprite_strip.sprite_uncaught.connect(afo_window.sprite_uncaught)
+    detector.detected.connect(controller.on_caught)
+    controller.pokemon_found.connect(sprite_strip.on_pokemon_found)
+    controller.pokemon_found.connect(boxes_window.on_pokemon_found)
+    controller.pokemon_found.connect(afo_window.on_pokemon_found)
 
-    sprite_strip.sprite_caught.connect(controller.on_detection)
-    sprite_strip.sprite_caught.connect(detector.select)
-    boxes_window.sprite_caught.connect(controller.on_detection)
-    boxes_window.sprite_caught.connect(detector.select)
-    sprite_strip.sprite_uncaught.connect(controller.forget)
-    sprite_strip.sprite_uncaught.connect(detector.forget)
-    sprite_strip.sprite_uncaught.connect(boxes_window.remove_pokemon)
+    sprite_strip.manual_caught.connect(controller.on_caught)
+    sprite_strip.manual_caught.connect(detector.on_manual_caught)
+    boxes_window.manual_caught.connect(controller.on_caught)
+    boxes_window.manual_caught.connect(detector.on_manual_caught)
+    sprite_strip.manual_uncaught.connect(controller.on_manual_uncaught)
+    sprite_strip.manual_uncaught.connect(detector.on_manual_uncaught)
+    sprite_strip.manual_uncaught.connect(boxes_window.on_manual_uncaught)
+    sprite_strip.manual_uncaught.connect(afo_window.on_manual_uncaught)
 
-    sprite_strip.sprite_ignored.connect(controller.ignore)
-    sprite_strip.sprite_ignored.connect(detector.forget)
-    sprite_strip.sprite_ignored.connect(boxes_window.remove_pokemon)
-    sprite_strip.sprite_unignored.connect(controller.unignore)
+    sprite_strip.manual_ignored.connect(controller.on_ignored)
+    sprite_strip.manual_ignored.connect(detector.on_manual_uncaught)
+    sprite_strip.manual_ignored.connect(boxes_window.on_manual_uncaught)
+    sprite_strip.manual_unignored.connect(controller.on_unignored)
 
     controller.register_command("box", boxes_window.change_box)
     controller.register_command("deposit", boxes_window.deposit)
@@ -314,14 +292,10 @@ def wire_ui_settings(settings: SettingsWindow,
     window.set_bottom_margin(settings.bottom_margin_spinbox.value())
 
     settings.sprite_width_spinbox.valueChanged.connect(
-        lambda width: window.set_sprite_dimensions(
-            width, settings.sprite_height_spinbox.value()
-        )
+        lambda width: window.set_sprite_dimensions(width, settings.sprite_height_spinbox.value())
     )
     settings.sprite_height_spinbox.valueChanged.connect(
-        lambda height: window.set_sprite_dimensions(
-            settings.sprite_width_spinbox.value(), height
-        )
+        lambda height: window.set_sprite_dimensions(settings.sprite_width_spinbox.value(), height)
     )
     window.set_sprite_dimensions(
         settings.sprite_width_spinbox.value(),
@@ -329,14 +303,10 @@ def wire_ui_settings(settings: SettingsWindow,
     )
 
     settings.box_sprite_width_spinbox.valueChanged.connect(
-        lambda width: boxes_window.set_sprite_dimensions(
-            width, settings.box_sprite_height_spinbox.value()
-        )
+        lambda width: boxes_window.set_sprite_dimensions(width, settings.box_sprite_height_spinbox.value())
     )
     settings.box_sprite_height_spinbox.valueChanged.connect(
-        lambda height: boxes_window.set_sprite_dimensions(
-            settings.box_sprite_width_spinbox.value(), height
-        )
+        lambda height: boxes_window.set_sprite_dimensions(settings.box_sprite_width_spinbox.value(), height)
     )
     boxes_window.set_sprite_dimensions(
         settings.box_sprite_width_spinbox.value(),
@@ -370,6 +340,30 @@ def wire_ui_settings(settings: SettingsWindow,
         comparison_time.minute() * 60 + comparison_time.second()
     )
     afo_window.set_afo_multiplier(settings.afo_multiplier_spinbox.value())
+
+
+def wire_calibration(capture: CaptureService,
+                     calibration: CalibrationService,
+                     detector: DetectionService,
+                     settings: SettingsWindow,
+                     apply_detection_type: callable):
+    """Wire up the calibration process to the UI and detection service."""
+    def on_calibrate_clicked() -> None:
+        if not calibration.active:
+            capture.frame_ready.disconnect(detector.process_frame)
+            if not capture.running:
+                capture.start()
+            run_calibration(calibration)
+
+    def on_calibration_finished(results) -> None:
+        save_calibration_results(results)
+        if results.get("GAME_AREA") is not None:
+            detector.update_game_area(results["GAME_AREA"])
+        apply_detection_type()
+        capture.frame_ready.connect(detector.process_frame, Qt.ConnectionType.DirectConnection)
+
+    settings.calibrate_button.clicked.connect(on_calibrate_clicked)
+    calibration.finished.connect(on_calibration_finished, Qt.ConnectionType.QueuedConnection)
 
 
 def reset_run(controller: GameController,

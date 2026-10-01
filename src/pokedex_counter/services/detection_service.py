@@ -24,12 +24,12 @@ from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import canonicalize_shades
 
 try:
-    from pokedex_counter.roi_calibration import GAME_AREA
+    from pokedex_counter.saved_calibration import GAME_AREA
 except ImportError:
     GAME_AREA = None
 
 class DetectionService(QObject):
-    detection = Signal(str)
+    detected = Signal(str)
     debug_scores = Signal(str, float)
     def __init__(self, debug=False, section_provider=None):
         super().__init__()
@@ -164,7 +164,7 @@ class DetectionService(QObject):
                 return
 
             if (mon in POKEMON_NAME_TO_DEX) and mon != self._last_detected:
-                self.detection.emit(mon)
+                self.detected.emit(mon)
                 self._last_detected = mon
                 print(f"Detected {mon}")
 
@@ -248,14 +248,14 @@ class DetectionService(QObject):
             self.debug_scores.emit(best_name, best_value)
 
         if best_value > DETECTION_IMAGE_THRESHOLD and best_name != self._last_detected:
-            self.detection.emit(best_name)
+            self.detected.emit(best_name)
             self._last_detected = best_name
             print(f"Detected {best_name}: {best_value}")
 
-    def select(self, name: str) -> None:
+    def on_manual_caught(self, name: str) -> None:
         self._last_detected = name
 
-    def forget(self, name: str) -> None:
+    def on_manual_uncaught(self, name: str) -> None:
         if name == self._last_detected:
             self._last_detected = None
 

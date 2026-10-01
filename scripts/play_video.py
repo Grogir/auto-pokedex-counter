@@ -2,19 +2,19 @@ import cv2
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import (
     CALIBRATION_DIR,
     CALIBRATION_FILENAMES,
     DETECTION_IMAGE_DIR,
 )
-from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.game_config import BONUSES
-from pokedex_counter.main_window import MainWindow
+from pokedex_counter.game_controller import GameController
 from pokedex_counter.services.capture_service import CaptureService
 from pokedex_counter.services.detection_service import DetectionService
 from pokedex_counter.services.pb_service import save_pb
 from pokedex_counter.services.template_service import TemplateService
+from pokedex_counter.ui.boxes_window import BoxesWindow
+from pokedex_counter.ui.main_window import MainWindow
 from pokedex_counter.vision.image_io import load_gray
 from pokedex_counter.vision.template_matching import find_best_match
 
@@ -55,7 +55,7 @@ def main() -> int:
     detector.update_game_area(game_area)
     window = MainWindow()
     boxes_window = BoxesWindow()
-    controller.count_changed.connect(window._update_counter)
+    controller.count_changed.connect(window.update_counter)
     window.sprite_strip.set_bonus_names(BONUSES)
     from pokedex_counter.app import wire_found_pokemon
     wire_found_pokemon(controller, window.sprite_strip, boxes_window)
@@ -65,7 +65,7 @@ def main() -> int:
 
     detector.build_roi_groups(TemplateService(DETECTION_IMAGE_DIR).templates)
     capture.frame_ready.connect(detector.process_frame_textbox, Qt.ConnectionType.DirectConnection)
-    detector.detection.connect(controller.on_detection)
+    detector.detected.connect(controller.on_caught)
     detector.set_section_provider(controller.current_section)
     capture.frame_skip = 3
     capture.start()

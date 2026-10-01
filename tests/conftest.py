@@ -4,7 +4,7 @@ import pytest
 
 from pokedex_counter.detection_config import DETECTION_IMAGE_TEXT_NAMES
 from pokedex_counter.game_config import FINAL_SECTION, ROUTE_SECTIONS
-from pokedex_counter.main_window import MainWindow
+from pokedex_counter.ui.main_window import MainWindow
 
 
 @pytest.fixture

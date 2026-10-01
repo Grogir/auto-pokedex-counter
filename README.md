@@ -6,83 +6,86 @@ A small [PySide6](https://doc.qt.io/qtforpython-6/) overlay window for tracking 
 
 Grab the latest `PokedexCounter.exe` from the [Releases page](https://github.com/Sidosh/auto-pokedex-counter/releases) and run it. Windows only.
 
-It looks for a device named **"OBS Virtual Camera"** and uses that automatically — so start the OBS Virtual Camera before launching the app. If it can't find one (e.g. it's not running yet, or you renamed it), it falls back to camera index 2.
+It looks for a device named **"OBS Virtual Camera"** and uses that automatically — so start the OBS Virtual Camera before launching the app. If it can't find one (e.g. it's not running yet, or you renamed it), it falls back to camera index 0.
 
-### What happens on launch: calibration
+### Calibration
 
-Every time the app starts, it calibrates itself before the counter window opens:
+Automatic detection needs a calibrated game area. If no calibration is available, the counter shows a prompt instead of a count. Calibration does not start automatically; use the **Calibrate** button in the settings window:
 
-1. You need to launch the OBS Virtual Camera
-2. A small "Calibration" preview window pops up showing your camera feed.
-3. Point the feed at the **Pokémon title screen** (the "Pokémon Blue Version" boot screen) — the app matches against that screen to figure out exactly where on your camera frame the catch/evolution/nickname regions are. This is necessary because everyone's camera framing and streaming layout is different.
-4. Colored boxes on the preview show live match confidence for the three regions it's searching for. Once all three are found confidently and held steady for a moment, the preview closes automatically and the counter window opens.
-5. Press `Esc` at any point to skip calibration — the app falls back to whatever positions worked last time instead.
+1. Start the OBS Virtual Camera and open the in-game title screen with Squirtle visible.
+2. Click **Calibrate**. A preview opens while the app searches for the game area.
+3. Once the area is found confidently and remains steady briefly, the calibration is saved for the next launch.
 
-A successful calibration is remembered for next launch (saved as a `roi_calibration.py` file next to the `.exe`), so you typically only need to re-do it if your camera framing changes. You can also re-run it at any time with the **Calibrate** button, without restarting the app.
+In a source run, calibration is written to `saved_calibration.py`; in the packaged executable, it is written next to the `.exe`. The calibrated area is applied to the current session, but these saved files are not reliably restored on the next launch yet. Press `Esc` to abort calibration; if no new area was locked, the existing calibration is kept. Selecting **No detection** disables automatic detection and does not require calibration.
 
 ## Using the app
 
-Two windows open side by side: the **counter window**, which is the one to capture in OBS, and a **settings window** holding every control — so nothing but the sprite grid and the count ever ends up on stream.
+The app opens four windows: the **counter**, **settings**, **Pokémon Boxes**, and **AFO Prediction**. Capture the counter window in OBS; use the settings window for controls, the boxes window to track the team and PC, and the AFO window for its time estimate and comparison.
 
 ### The counter window
 
-All 151 sprites plus a running "N caught". Catching a Pokémon highlights its sprite and bumps the count.
+All 151 sprites and the current count. Automatic detection can use text or sprite matching; choose the detection mode in settings. Catching a Pokémon highlights its sprite and bumps the count.
 
 **Clicking a sprite marks or unmarks it by hand**, for when the detector misses a catch or flags one it shouldn't. Unmarking also lets that Pokémon be detected again later.
 
-Right-clicking a sprite toggles **ignored** (gray). An ignored Pokémon
-completes a route section but is not added to the global count or the boxes.
-Left-clicking an ignored sprite catches it normally in black; pressing the
-right button again simply removes the ignored state. Press **Backspace** to
-force-detect every required Pokémon in the current section, even when the app
-is not focused.
+Right-clicking a sprite toggles **ignored** (gray).
+An ignored Pokémon counts toward the current route section, but is not added to the global count or the boxes. Right-clicking it again removes the ignored state.
+Press **Backspace** to mark enough missing required Pokémon to pass the current section, even when the app is not focused.
 
-Until at least one region has been calibrated, the count is replaced by a prompt to calibrate — detection can't run at all in that state, so showing "0 caught" would look like it was working.
+Until the game area has been calibrated, the count is replaced by a calibration prompt. This is only needed for automatic detection; select **No detection** to track catches manually without calibration.
 
 ### The settings window
 
 | Control | What it does |
 | --- | --- |
 | Sprites per row | Grid width; the counter window resizes itself to fit |
+| Sprite width / height | Sprite dimensions in the counter window |
+| Sprite padding | Spacing around sprites in the counter and boxes windows |
+| Box sprite width / height | Sprite dimensions in the boxes window |
 | Counter font size | Size of the "N caught" text |
-| Compare to WR? | Color-codes the grid against the bundled world-record route |
-| Highlight bonuses | Colors bonus catches red (see below) |
+| Bottom margin | Extra space below the counter window content |
+| Sprite set | Selects the sprite artwork set |
+| Detection type | No detection, text detection, or sprite detection |
+| Compare to | Selects a comparison route, or **None** |
+| AFO comparison | Reference time used to show the AFO time difference |
+| AFO modifier | Adjusts the AFO estimate by a percentage |
+| Highlight bonuses | Highlights wild-caught bonus Pokémon (see below) |
+| Remove title bar | Hides the counter window title bar |
 | Reset counter | Clears the run and starts fresh |
 | Calibrate | Re-runs calibration mid-session |
 
-The four settings above the buttons are remembered between launches.
+Settings are remembered between launches.
 
 ### Route and sprite colors
 
 The section route is read from `resources/route/route.txt`.
+By default, every required Pokémon must be obtained or ignored to complete a section. A route line can set a lower threshold with `MIN:n`; ignored Pokémon count toward that minimum.
 
-The current section colors uncaught icons as follows:
+The icons are colored as follows:
 
-- **Light blue** — required to complete the current section.
-- **Light red** — an optional bonus for the current section. It only becomes
-  a red caught Pokémon when it is also present in the global `BONUSES` list.
+- **Black** — obtained normally, including by evolution.
+- **Red** — a wild-caught bonus when **Highlight bonuses** is enabled.
 - **Gray** — ignored with the right mouse button.
-- **Black** — obtained normally.
 
-The first list must be entirely obtained (or ignored) before the next section
-becomes active. The selected comparison can still add its own colors:
+The current route section colors icons as follows:
 
-- **Blue** — on the selected comparison route for a section you've already reached, but not caught yet. In other words, that run would have it by now and you don't. These accumulate as the run progresses, so one missed in its own section stays flagged.
-- **Black** — caught, and on the selected comparison route.
-- **Green** — caught, but not on the selected comparison route in any section reached so far.
-- **Red** — caught in the wild and listed as a bonus. This wins over black and green, so a bonus stands out whether or not it's on the route. Every bonus is an evolved form, so *evolving* into one is the ordinary path and doesn't count — only the wild catch turns it red.
+- **Blue** — required to meet the current section's minimum.
+- **Light pink** — an potential bonus for the current section.
 
-Resetting the counter clears the accumulated comparison marks so the next run re-earns them section by section. Bonus highlighting is a fixed list, so it just stays on.
+The selected comparison adds bonus-route colors:
 
-Comparison JSON files in `resources/comparison/` are listed in the settings
-dropdown when they contain valid section-to-Pokémon data. A packaged build
-also scans the `comparison/` folder next to the executable, where a same-named
-file is shown as a separate selectable entry. Choose **None** to disable
-comparison colors.
+- **Red** — a wild-caught bonus that is not on the selected comparison.
+- **Yellow** — a bonus on the selected comparison, but not caught yet.
+- **Orange** — a wild-caught bonus that is also on the selected comparison.
+
+Turning off **Highlight bonuses** removes the red/orange catch highlighting.
+
+Comparison marks accumulate as the run progresses. Resetting the counter clears them so the next run earns them section by section. The list of bonus Pokémon is fixed.
+Comparison JSON files in `resources/comparison/` are listed in the settings dropdown when they contain valid section-to-Pokémon data. A packaged build also scans the `comparison/` folder next to the executable, where a same-named file is shown as a separate selectable entry.
 
 ### Personal best
 
-When a run reaches all 151, resetting the counter or closing the app asks whether to save it as your personal best. Saving writes `comparison/PB.json` — next to the `.exe` when running the packaged build — recording which Pokémon were caught in which section. The comparison dropdown refreshes after the save.
+When a run reaches all 151, resetting the counter or closing the app asks whether to save it as your personal best. Saving records which Pokémon were caught in which section. A source run writes `src/pokedex_counter/resources/comparison/PB.json`; a packaged build writes `comparison/PB.json` next to the `.exe`. The comparison dropdown refreshes after the save.
 
 ## Setup (for development)
 
@@ -117,34 +120,51 @@ This produces `dist/PokedexCounter.exe` (bundled with `resources/`) using PyInst
 ```text
 src/pokedex_counter/
   __main__.py                 Entry point (`python -m pokedex_counter`)
-  app.py                      QApplication bootstrap and service wiring
-  calibration_runner.py       Runs calibration on startup, persists locked ROIs
-  camera.py                   Finds the OBS Virtual Camera's device index
-  roi_config.py               Catch route, bonus list, detection entry building
-  roi_calibration.py          GAME_AREA for this machine (gitignored)
-  roi_writer.py               Rewrites roi_calibration.py's ROI_* constants on disk
-  config.py                   App-wide constants, resource paths
-  main_window.py              Counter window UI (sprite grid + counter)
-  settings_window.py          Settings window UI (all controls live here)
-  controllers/game_controller.py   Tracks which Pokemon have been found
+  app.py                      QApplication bootstrap and component wiring
+  config.py                   App-wide constants and resource paths
+  detection_config.py         Detection settings and calibration status
+  game_config.py              Pokémon data, route sections, and bonuses
+  game_controller.py          Tracks found/ignored Pokémon and route progress
+  saved_calibration.py        Generated calibration file (source runs; gitignored)
   services/
+    calibration_runner.py     Starts calibration and saves its result
+    calibration_service.py    Finds the game area in camera frames
+    camera_finder.py          Finds the OBS Virtual Camera device index
     capture_service.py        Camera capture thread
-    calibration_service.py    Live ROI calibration against the title screen
-    detection_service.py      Per-frame catch/evolve/text detection
-    route_service.py          Loads and validates route.json or route.txt
-    template_service.py       Loads sprite template images
-    comparison_service.py     Loads valid comparison routes from JSON files
+    comparison_service.py     Loads and validates comparison files
+    detection_service.py      Per-frame text and sprite detection
+    global_hotkey.py          Registers the global Backspace hotkey
     pb_service.py             Saves a completed run to PB.json
-  vision/template_matching.py Multi-scale template matching helper
-  ui/widgets/
-    sprite_strip.py           The sprite grid, and all catch-coloring rules
-    clickable_label.py        One sprite: click to toggle, paints its highlight
-    flow_layout.py            Wrapping grid layout the strip is built on
+    roi_writer.py             Persists calibrated game-area coordinates
+    route_service.py          Loads and validates the route.txt format
+    template_service.py       Loads detection template images
+  ui/
+    afo_window.py             AFO time estimate and comparison
+    boxes_window.py           Team and PC box tracker
+    main_window.py            Counter window and sprite grid
+    settings_window.py        Detection, display, and comparison controls
+    widgets/
+      sprite_strip.py         Sprite grid and click handling
+      clickable_label.py      Clickable sprite and its highlights
+      flow_layout.py          Wrapping layout for the sprite grid
+  vision/
+    image_io.py               Image-loading helpers
+    template_matching.py      Multi-scale template matching helper
   resources/
-    sprites_*/, detection/   Per-Pokemon template images
-    calibration/                    Title-screen reference crops
-    comparison/WR.json              World-record route, by section
-    fonts/                          Pokemon display fonts for the counter
-tests/                        pytest + pytest-qt tests
-scripts/build.py              PyInstaller packaging script
+    calibration/              Title-screen reference image
+    comparison/               Bundled comparison routes
+    detection/                Per-Pokémon detection templates
+    fonts/                    Counter display fonts
+    route/                    Route text files, including route.txt
+    sprites_1/                Sprite artwork set 1
+    sprites_2/                Sprite artwork set 2
+    sprites_3/                Sprite artwork set 3
+    textbox/                  Text detection templates
+tests/
+  test_*.py                    App and controller tests
+  services/                    Service tests
+  ui/                          Window tests
+  ui/widgets/                  Widget tests
+  vision/                      Image matching tests
+scripts/build.py               PyInstaller packaging script
 ```

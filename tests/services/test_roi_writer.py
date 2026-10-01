@@ -2,7 +2,7 @@
 
 import pytest
 
-from pokedex_counter.roi_writer import update_roi_constants
+from pokedex_counter.services.roi_writer import update_roi_constants
 
 ORIGINAL = '''GAME_AREA = (348, 41, 99, 99)
 
@@ -37,7 +37,7 @@ def test_preserves_rest_of_file(config_file):
 
 
 def test_replaces_none_placeholder_on_first_calibration(tmp_path):
-    path = tmp_path / "roi_calibration.py"
+    path = tmp_path / "saved_calibration.py"
     path.write_text("GAME_AREA = None\n")
 
     updated = update_roi_constants(path, {"GAME_AREA": (1, 2, 3, 4)})

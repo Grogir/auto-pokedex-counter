@@ -137,7 +137,7 @@ class AfoWindow(QWidget):
         else:
             return f"{seconds:+d}"
 
-    def pokemon_found(self, name: str, evolved: bool = False) -> None:
+    def on_pokemon_found(self, name: str, evolved: bool = False) -> None:
         section = self._section_provider()
         if evolved and section >= len(ROUTE_SECTIONS) - 1:
             return
@@ -152,7 +152,7 @@ class AfoWindow(QWidget):
             self._awaiting_level.add(name)
             self._update_display()
 
-    def sprite_uncaught(self, name: str) -> None:
+    def on_manual_uncaught(self, name: str) -> None:
         prev = previous_form_of(name)
         if prev in self.evo_time:
             if prev in SPECIFIC_EVO_TIME:

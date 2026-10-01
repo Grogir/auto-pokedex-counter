@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
 
     def set_count_provider(self, count_provider):
         self._count_provider = count_provider
-        self._update_counter(count_provider())
+        self.update_counter(count_provider())
 
     def _apply_counter_font(self, points: int) -> None:
         font = QFont(self._counter_font_family)
@@ -72,11 +72,11 @@ class MainWindow(QMainWindow):
         if self._calibrated:
             # This font is broken, so we have to manually set the height
             self.counter_label.setFixedHeight(round(self.counter_label.fontMetrics().height() * 0.75 + 2))
-            self._update_counter(self._count_provider() if self._count_provider is not None else 0)
+            self.update_counter(self._count_provider() if self._count_provider is not None else 0)
         else:
             self.counter_label.setMaximumHeight(1000)
 
-    def _update_counter(self, value: int):
+    def update_counter(self, value: int):
         if not self._calibrated:
             return
         value = str(value)
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         self.counter_label.setWordWrap(not calibrated)
         if calibrated:
             self._apply_counter_font(self._counter_font_size)
-            self._update_counter(self._count_provider() if self._count_provider is not None else 0)
+            self.update_counter(self._count_provider() if self._count_provider is not None else 0)
         else:
             self._apply_counter_font(CALIBRATION_MESSAGE_FONT_SIZE)
             self.counter_label.setText(CALIBRATION_NEEDED_MESSAGE)

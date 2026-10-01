@@ -41,7 +41,7 @@ CALIBRATION_FILENAMES = {"GAME_AREA": "full5.png"}
 # and when frozen, _PACKAGE_DIR points
 # at PyInstaller's ephemeral extraction dir (sys._MEIPASS), which vanishes
 # when the process exits. This mirrors calibration_runner.py's writable-path
-# split for roi_calibration.py: next to the executable when frozen, next to
+# split for saved_calibration.py: next to the executable when frozen, next to
 # the comparison resources when running from source.
 if getattr(sys, "frozen", False):
     PB_JSON_PATH = EXTERNAL_COMPARISON_DIR / "PB.json"

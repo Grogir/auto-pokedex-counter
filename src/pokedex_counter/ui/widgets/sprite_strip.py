@@ -18,10 +18,10 @@ from pokedex_counter.ui.widgets.flow_layout import FlowLayout
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
 class SpriteStrip(QWidget):
-    sprite_caught = Signal(str)
-    sprite_uncaught = Signal(str)
-    sprite_ignored = Signal(str)
-    sprite_unignored = Signal(str)
+    manual_caught = Signal(str)
+    manual_uncaught = Signal(str)
+    manual_ignored = Signal(str)
+    manual_unignored = Signal(str)
 
     def __init__(self, folder: Path, sprite_size: int = 24, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -164,7 +164,7 @@ class SpriteStrip(QWidget):
         for name, label in self._labels_by_name.items():
             label.set_section_state(name in required, name in bonuses)
 
-    def pokemon_found(self, name: str, evolved: bool = False) -> bool:
+    def on_pokemon_found(self, name: str, evolved: bool = False) -> bool:
         """Mark `name` as obtained. `evolved` says it was obtained by
         evolution rather than by catching it, which suppresses the bonus
         highlight. Defaults to False so a plain "it was caught" call - the
@@ -221,10 +221,10 @@ class SpriteStrip(QWidget):
 
         if isinstance(label, ClickableLabel):
             if caught:
-                self.sprite_caught.emit(name)
+                self.manual_caught.emit(name)
             else:
                 label.set_caught(False)
-                self.sprite_uncaught.emit(name)
+                self.manual_uncaught.emit(name)
 
     def _on_ignore_clicked(self, path: Path, ignored: bool) -> None:
         name = POKEMON_DEX_TO_NAME.get(int(path.stem), path.stem)
@@ -232,7 +232,7 @@ class SpriteStrip(QWidget):
 
         if isinstance(label, ClickableLabel):
             if ignored:
-                self.sprite_ignored.emit(name)
+                self.manual_ignored.emit(name)
             else:
-                self.sprite_unignored.emit(name)
+                self.manual_unignored.emit(name)
             label.set_ignored(ignored)

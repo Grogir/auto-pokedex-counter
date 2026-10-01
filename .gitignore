@@ -13,5 +13,5 @@ dist/
 /debug
 /screenshots
 /.vscode
-/src/pokedex_counter/roi_calibration.py
+/src/pokedex_counter/saved_calibration.py
 /src/pokedex_counter/resources/comparison/PB.json

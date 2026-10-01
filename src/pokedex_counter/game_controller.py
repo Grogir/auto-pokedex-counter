@@ -68,7 +68,7 @@ class GameController(QObject):
             for name in route_section.required
         )
 
-    def on_detection(self, name: str) -> None:
+    def on_caught(self, name: str) -> None:
         section = self.current_section()
         self.ignored.discard(name)
         is_new = name not in self.found
@@ -103,7 +103,7 @@ class GameController(QObject):
 
     def _execute_route_command(self, command: RouteCommand) -> None:
         if command.name == "FORCE":
-            self.on_detection(command.parameter)
+            self.on_caught(command.parameter)
         elif command.name == "IF":
             pokemon, separator, nested_command = command.parameter.partition(" ")
             if separator and pokemon in self.found:
@@ -115,7 +115,7 @@ class GameController(QObject):
             if callback is not None:
                 callback(command.parameter)
 
-    def forget(self, name: str) -> None:
+    def on_manual_uncaught(self, name: str) -> None:
         for section in list(self.section_catches):
             names = self.section_catches[section]
             names[:] = [caught_name for caught_name in names if caught_name != name]
@@ -127,13 +127,13 @@ class GameController(QObject):
         self.count_changed.emit(self.count)
         self.section_changed.emit(self.current_section())
 
-    def ignore(self, name: str) -> None:
+    def on_ignored(self, name: str) -> None:
         """Exclude a Pokémon from the global run while satisfying sections."""
-        self.forget(name)
+        self.on_manual_uncaught(name)
         self.ignored.add(name)
         self.section_changed.emit(self.current_section())
 
-    def unignore(self, name: str) -> None:
+    def on_unignored(self, name: str) -> None:
         if name in self.ignored:
             self.ignored.remove(name)
             self.section_changed.emit(self.current_section())
@@ -147,7 +147,7 @@ class GameController(QObject):
         missing = [name for name in sections[section].required if name not in self.found and name not in self.ignored]
         already_done = len(sections[section].required) - len(missing)
         for name in missing[:sections[section].minimum - already_done]:
-            self.on_detection(name)
+            self.on_caught(name)
 
     def reset(self) -> None:
         self.found.clear()

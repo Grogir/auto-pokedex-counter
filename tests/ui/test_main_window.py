@@ -34,7 +34,7 @@ def test_closing_main_window_requests_application_quit(main_window, qtbot):
 
 
 def test_set_calibrated_false_shows_the_calibration_message(main_window):
-    from pokedex_counter.main_window import CALIBRATION_NEEDED_MESSAGE
+    from pokedex_counter.ui.main_window import CALIBRATION_NEEDED_MESSAGE
 
     main_window.set_calibrated(False)
 
@@ -43,23 +43,23 @@ def test_set_calibrated_false_shows_the_calibration_message(main_window):
 
 
 def test_update_counter_is_ignored_while_uncalibrated(main_window):
-    from pokedex_counter.main_window import CALIBRATION_NEEDED_MESSAGE
+    from pokedex_counter.ui.main_window import CALIBRATION_NEEDED_MESSAGE
 
     main_window.set_calibrated(False)
-    main_window._update_counter(5)
+    main_window.update_counter(5)
 
     assert main_window.counter_label.text() == CALIBRATION_NEEDED_MESSAGE
 
 
 def test_set_calibrated_true_restores_the_current_count(main_window):
-    from pokedex_counter.controllers.game_controller import GameController
+    from pokedex_counter.game_controller import GameController
 
     controller = GameController()
-    controller.count_changed.connect(main_window._update_counter)
+    controller.count_changed.connect(main_window.update_counter)
     main_window.set_count_provider(controller.current_count)
     main_window.set_calibrated(False)
     for name in ("BULBASAUR", "IVYSAUR", "VENUSAUR"):
-        controller.on_detection(name)
+        controller.on_caught(name)
 
     main_window.set_calibrated(True)
 

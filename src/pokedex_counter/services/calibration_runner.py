@@ -4,8 +4,8 @@ from pathlib import Path
 import cv2
 
 from pokedex_counter.config import CALIBRATION_FILENAMES, RESOURCES_DIR
-from pokedex_counter.roi_writer import update_roi_constants
 from pokedex_counter.services.calibration_service import CalibrationService
+from pokedex_counter.services.roi_writer import update_roi_constants
 from pokedex_counter.vision.image_io import load_color
 
 # None means "not calibrated yet" - app.py shows a calibration prompt
@@ -15,18 +15,18 @@ from pokedex_counter.vision.image_io import load_color
 _SEED_TEMPLATE = "GAME_AREA = None\n"
 
 
-def _writable_roi_calibration_path() -> Path:
+def _writable_saved_calibration_path() -> Path:
     """Where calibration persists locked ROIs for next launch.
-    Source/dev runs write straight into the package's roi_calibration.py
+    Source/dev runs write straight into the package's saved_calibration.py
     A frozen exe has no such writable file — its modules are baked
-    into the bundle — so it gets its own roi_calibration.py next to the
+    into the bundle — so it gets its own saved_calibration.py next to the
     executable instead. Either way, run_calibration() also returns the
     locked ROIs so the current run doesn't depend on this write (or a
     re-import) succeeding.
     """
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent / "roi_calibration.py"
-    return Path(__file__).resolve().parent / "roi_calibration.py"
+        return Path(sys.executable).resolve().parent / "saved_calibration.py"
+    return Path(__file__).resolve().parent.parent / "saved_calibration.py"
 
 
 def _ensure_seeded(config_path: Path) -> None:
@@ -55,7 +55,7 @@ def save_calibration_results(
         print("[Calibration] Nothing locked, using the existing values.")
         return
 
-    config_path = _writable_roi_calibration_path()
+    config_path = _writable_saved_calibration_path()
     try:
         _ensure_seeded(config_path)
         updated = update_roi_constants(config_path, locked)

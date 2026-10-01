@@ -1,11 +1,11 @@
 from pokedex_counter.config import DETECTION_TEXTBOX_DIR
 
-# GAME_AREA lives in roi_calibration.py, a sibling module that's gitignored.
+# GAME_AREA lives in saved_calibration.py, a sibling module that's gitignored.
 # It holds this machine's camera calibration, which is personal/local and shouldn't show up as a diff every time this app is recalibrated.
 # calibration_runner.py's run_calibration() rewrites that file in place via roi_writer.py.
 # There are deliberately no default/fallback coordinates. None means "not calibrated yet".
 try:
-    from pokedex_counter.roi_calibration import GAME_AREA
+    from pokedex_counter.saved_calibration import GAME_AREA
 except ImportError:
     GAME_AREA = None
 

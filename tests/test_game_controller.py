@@ -1,5 +1,5 @@
-import pokedex_counter.controllers.game_controller as game_controller_module
-from pokedex_counter.controllers.game_controller import GameController
+import pokedex_counter.game_controller as game_controller_module
+from pokedex_counter.game_controller import GameController
 from pokedex_counter.services.route_service import (
     RouteCommand,
     RouteSection,
@@ -12,8 +12,8 @@ def test_duplicate_catches_are_logged_and_counted_once():
     findings = []
     controller.pokemon_found.connect(lambda *finding: findings.append(finding))
 
-    controller.on_detection("CHARMANDER")
-    controller.on_detection("CHARMANDER")
+    controller.on_caught("CHARMANDER")
+    controller.on_caught("CHARMANDER")
 
     assert controller.count == 1
     assert controller.found == {"CHARMANDER"}
@@ -24,8 +24,8 @@ def test_duplicate_catches_are_logged_and_counted_once():
 def test_section_is_derived_from_found_triggers():
     controller = GameController()
 
-    controller.on_detection("BULBASAUR")
-    controller.on_detection("PIDGEY")
+    controller.on_caught("BULBASAUR")
+    controller.on_caught("PIDGEY")
 
     assert controller.current_section() == 2
     assert [names for names in controller.section_catches.values()] == [["BULBASAUR"], ["PIDGEY"]]
@@ -33,10 +33,10 @@ def test_section_is_derived_from_found_triggers():
 
 def test_forgetting_a_pokemon_removes_all_duplicates():
     controller = GameController()
-    controller.on_detection("BULBASAUR")
-    controller.on_detection("BULBASAUR")
+    controller.on_caught("BULBASAUR")
+    controller.on_caught("BULBASAUR")
 
-    controller.forget("BULBASAUR")
+    controller.on_manual_uncaught("BULBASAUR")
 
     assert controller.count == 0
     assert controller.found == set()
@@ -45,8 +45,8 @@ def test_forgetting_a_pokemon_removes_all_duplicates():
 
 def test_reset_clears_the_run_state():
     controller = GameController()
-    controller.on_detection("MR.MIME")
-    controller.on_detection("BULBASAUR")
+    controller.on_caught("MR.MIME")
+    controller.on_caught("BULBASAUR")
 
     controller.reset()
 
@@ -69,7 +69,7 @@ def test_route_commands_run_when_the_previous_section_is_completed(monkeypatch):
     calls = []
     controller.register_command("mark", calls.append)
 
-    controller.on_detection("BULBASAUR")
+    controller.on_caught("BULBASAUR")
 
     assert calls == ["NEXT"]
     assert controller.current_section() == 1
@@ -92,7 +92,7 @@ def test_force_and_if_commands_dispatch_at_a_section_boundary(monkeypatch):
     calls = []
     controller.register_command("MARK", calls.append)
 
-    controller.on_detection("BULBASAUR")
+    controller.on_caught("BULBASAUR")
 
     assert calls == ["MATCHED"]
     assert "PIDGEY" in controller.found
@@ -110,6 +110,6 @@ def test_commands_at_the_beginning_and_the_end(monkeypatch, tmp_path, qtbot):
 
     qtbot.waitUntil(lambda: "BULBASAUR" in controller.found)
     assert "BULBASAUR" in controller.found
-    controller.on_detection("IVYSAUR")
+    controller.on_caught("IVYSAUR")
     assert "IVYSAUR" in controller.found
     assert "VENUSAUR" in controller.found

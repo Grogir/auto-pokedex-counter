@@ -83,7 +83,7 @@ def test_calibrated_game_area_detects_expected_pokemon(
     detector = _build_detector(sprite_templates, game_area)
     _prime_to_section(detector, expected_section)
     detections = []
-    detector.detection.connect(detections.append)
+    detector.detected.connect(detections.append)
 
     frame = load_color(DETECTION_FIXTURES_DIR / detection_fixture)
     assert frame is not None
@@ -101,7 +101,7 @@ def test_textbox_frames_detect_expected_pokemon(
 ):
     detector = _make_detector((0, 0, 1, 1))
     detections = []
-    detector.detection.connect(detections.append)
+    detector.detected.connect(detections.append)
 
     frame = load_color(DETECTION_FIXTURES_DIR / detection_fixture)
     assert frame is not None
@@ -125,7 +125,7 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     detector = _build_detector(sprite_templates, game_area)
     _prime_to_section(detector, SEC_HYPNO)
     detections = []
-    detector.detection.connect(detections.append)
+    detector.detected.connect(detections.append)
     frame = load_color(DETECTION_FIXTURES_DIR / "catch_01.png")
 
     for _ in range(5):
@@ -135,7 +135,7 @@ def test_repeated_frames_detect_only_once_until_forgotten(sprite_templates, cali
     detector.process_frame_image(np.zeros_like(frame))
     assert detections == ["HYPNO"]
 
-    detector.forget("HYPNO")
+    detector.on_manual_uncaught("HYPNO")
     detector.process_frame_image(frame)
     assert detections == ["HYPNO", "HYPNO"]
 
@@ -144,7 +144,7 @@ def test_flat_frame_does_not_spuriously_match(sprite_templates, calibrated_rois)
     game_area = calibrated_rois["calibration_01.png"]["GAME_AREA"]
     detector = _build_detector(sprite_templates, game_area)
     detections = []
-    detector.detection.connect(detections.append)
+    detector.detected.connect(detections.append)
 
     detector.process_frame_image(
         np.full((*reversed(FRAME_SIZE_DETECTION), 3), 128, dtype=np.uint8)

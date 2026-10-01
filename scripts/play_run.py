@@ -3,11 +3,11 @@ import json
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from pokedex_counter.boxes_window import BoxesWindow
 from pokedex_counter.config import COMPARISON_DIR
-from pokedex_counter.controllers.game_controller import GameController
 from pokedex_counter.game_config import BONUSES
-from pokedex_counter.main_window import MainWindow
+from pokedex_counter.game_controller import GameController
+from pokedex_counter.ui.boxes_window import BoxesWindow
+from pokedex_counter.ui.main_window import MainWindow
 
 RUN_PATH = COMPARISON_DIR / "WR_noafo.json"
 WAIT_MS = 50
@@ -46,7 +46,7 @@ def playback(loaded, controller: GameController) -> None:
 
         name = playback[index]
         index += 1
-        controller.on_detection(name)
+        controller.on_caught(name)
         QTimer.singleShot(WAIT_MS, play_next)
 
     QTimer.singleShot(0, play_next)
@@ -60,7 +60,7 @@ def main() -> int:
     controller = GameController()
     window = MainWindow()
     boxes_window = BoxesWindow()
-    controller.count_changed.connect(window._update_counter)
+    controller.count_changed.connect(window.update_counter)
     window.sprite_strip.set_bonus_names(BONUSES)
     from pokedex_counter.app import wire_found_pokemon
     wire_found_pokemon(controller, window.sprite_strip, boxes_window)

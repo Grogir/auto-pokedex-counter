@@ -1,9 +1,9 @@
 from PySide6.QtCore import Qt
 
-import pokedex_counter.boxes_window as boxes_module
-from pokedex_counter.boxes_window import BOX_SIZE, TEAM_SIZE, BoxesWindow
+import pokedex_counter.ui.boxes_window as boxes_module
 from pokedex_counter.config import SPRITES_DIR, SPRITES_DIRS
 from pokedex_counter.game_config import POKEMON_DEX_TO_NAME
+from pokedex_counter.ui.boxes_window import BOX_SIZE, TEAM_SIZE, BoxesWindow
 
 
 def test_first_six_non_evolutions_go_to_team_then_boxes(qtbot):
@@ -11,7 +11,7 @@ def test_first_six_non_evolutions_go_to_team_then_boxes(qtbot):
     qtbot.addWidget(window)
 
     for name in (POKEMON_DEX_TO_NAME[number] for number in range(1, TEAM_SIZE + 2)):
-        window.pokemon_found(name)
+        window.on_pokemon_found(name)
 
     assert window.boxes[0] == ["BULBASAUR", "IVYSAUR", "VENUSAUR", "CHARMANDER", "CHARMELEON", "CHARIZARD"]
     assert window.team is window.boxes[0]
@@ -27,7 +27,7 @@ def test_full_box_starts_the_next_box(qtbot):
         POKEMON_DEX_TO_NAME[number]
         for number in range(1, TEAM_SIZE + BOX_SIZE + 2)
     ):
-        window.pokemon_found(name)
+        window.on_pokemon_found(name)
 
     assert len(window.boxes[1]) == BOX_SIZE
     assert window.boxes[2] == ["SANDSHREW"]
@@ -37,8 +37,8 @@ def test_evolution_is_remembered_but_not_assigned_a_slot(qtbot):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
 
-    window.pokemon_found("BULBASAUR")
-    window.pokemon_found("IVYSAUR", evolved=True)
+    window.on_pokemon_found("BULBASAUR")
+    window.on_pokemon_found("IVYSAUR", evolved=True)
 
     assert window.boxes[0] == ["IVYSAUR"]
     assert len(window.boxes) == 1 + 7
@@ -48,10 +48,10 @@ def test_evolution_is_remembered_but_not_assigned_a_slot(qtbot):
 def test_clicking_icon_emits_its_first_evolution(qtbot):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("EEVEE")
+    window.on_pokemon_found("EEVEE")
     icon = window._rows[0][2][0].layout().itemAt(0).widget()
 
-    with qtbot.waitSignal(window.sprite_caught) as signal:
+    with qtbot.waitSignal(window.manual_caught) as signal:
         qtbot.mouseClick(icon, Qt.MouseButton.LeftButton)
 
     assert signal.args == ["VAPOREON"]
@@ -62,9 +62,9 @@ def test_hidden_pokemon_keeps_the_real_slot_number(qtbot, monkeypatch):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
 
-    for _ in range(6): window.pokemon_found("PIDGEY")
-    window.pokemon_found("BULBASAUR")
-    window.pokemon_found("VENUSAUR")
+    for _ in range(6): window.on_pokemon_found("PIDGEY")
+    window.on_pokemon_found("BULBASAUR")
+    window.on_pokemon_found("VENUSAUR")
 
     box_layout = window._rows[1][1]
     visible_slot = box_layout.itemAt(1).widget()
@@ -104,7 +104,7 @@ def test_team_slot_labels_keep_their_physical_positions(qtbot, monkeypatch):
 def test_resize_updates_existing_icon_widgets(qtbot, monkeypatch):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("BULBASAUR")
+    window.on_pokemon_found("BULBASAUR")
     icon = window._rows[0][2][0].layout().itemAt(0).widget()
 
     window.set_sprite_size(40)
@@ -116,7 +116,7 @@ def test_resize_updates_existing_icon_widgets(qtbot, monkeypatch):
 def test_rectangular_dimensions_resize_existing_box_icon(qtbot, monkeypatch):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("BULBASAUR")
+    window.on_pokemon_found("BULBASAUR")
     icon = window._rows[0][2][0].layout().itemAt(0).widget()
 
     window.set_sprite_dimensions(40, 30)
@@ -128,7 +128,7 @@ def test_rectangular_dimensions_resize_existing_box_icon(qtbot, monkeypatch):
 def test_switching_sprite_folder_redraws_existing_icons(qtbot):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("BULBASAUR")
+    window.on_pokemon_found("BULBASAUR")
     icon = window._rows[0][2][0].layout().itemAt(0).widget()
 
     window.set_sprites_dir(SPRITES_DIRS[0])
@@ -141,7 +141,7 @@ def test_switching_sprite_folder_redraws_existing_icons(qtbot):
 def test_padding_expands_existing_box_icon_label(qtbot, monkeypatch):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("BULBASAUR")
+    window.on_pokemon_found("BULBASAUR")
     icon = window._rows[0][2][0].layout().itemAt(0).widget()
 
     window.set_sprite_dimensions(40, 30)
@@ -191,8 +191,8 @@ def test_empty_team_and_seven_boxes_are_visible(qtbot):
 def test_reset_clears_history_team_and_boxes(qtbot):
     window = BoxesWindow(SPRITES_DIR)
     qtbot.addWidget(window)
-    window.pokemon_found("BULBASAUR")
-    window.pokemon_found("RATICATE", evolved=True)
+    window.on_pokemon_found("BULBASAUR")
+    window.on_pokemon_found("RATICATE", evolved=True)
 
     window.reset()
 
@@ -208,7 +208,7 @@ def test_counts_include_hidden_pokemon(qtbot, monkeypatch):
     for name in (
         POKEMON_DEX_TO_NAME[number] for number in range(1, TEAM_SIZE + 3)
     ):
-        window.pokemon_found(name)
+        window.on_pokemon_found(name)
 
     team_count = window._rows[0][1].itemAt(0).widget().layout().itemAt(1).widget()
     box_count = window._rows[1][1].itemAt(0).widget().layout().itemAt(1).widget()
@@ -223,7 +223,7 @@ def test_remove_pokemon_removes_all_occurrences(qtbot):
     window.boxes[1].extend(["RATICATE", "SPEAROW"])
     window._update_rows()
 
-    window.remove_pokemon("RATICATE")
+    window.on_manual_uncaught("RATICATE")
 
     assert window.boxes[0] == []
     assert window.boxes[1] == ["SPEAROW"]
