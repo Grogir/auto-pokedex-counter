@@ -20,8 +20,8 @@ from pokedex_counter.vision.template_matching import find_best_match
 
 TEMPLATE_PATH = CALIBRATION_DIR / CALIBRATION_FILENAMES["GAME_AREA"]
 
-# VIDEO_PATH = "E:\\_ananan_12726.mp4"
-VIDEO_PATH = "E:\\_sid_130.mp4"
+VIDEO_PATH = "E:\\_ananan_12726.mp4"
+# VIDEO_PATH = "E:\\_sid_130.mp4"
 # VIDEO_PATH = "E:\\2026-09-10 20-10-18 12809.mp4"
 CALIBRATION_TIME = 30.0
 CALIBRATE_SKIP_FRAMES = 120
@@ -31,6 +31,7 @@ def main() -> int:
     capture = CaptureService(source = VIDEO_PATH)
 
     print("Calibrating...")
+    capture._open_capture()
     template = load_gray(TEMPLATE_PATH)
     best_score, best_box = 0, None
     for current_frame in range(round(CALIBRATION_TIME * 60)):
@@ -55,10 +56,12 @@ def main() -> int:
     detector.update_game_area(game_area)
     window = MainWindow()
     boxes_window = BoxesWindow()
+    window.set_calibrated(True)
     controller.count_changed.connect(window.update_counter)
-    window.sprite_strip.set_bonus_names(BONUSES)
-    from pokedex_counter.app import wire_found_pokemon
-    wire_found_pokemon(controller, window.sprite_strip, boxes_window)
+    sprite_strip = window.sprite_strip
+    sprite_strip.set_bonus_names(BONUSES)
+    controller.pokemon_found.connect(sprite_strip.on_pokemon_found)
+    controller.pokemon_found.connect(boxes_window.on_pokemon_found)
     window.show()
     boxes_window.move(window.x() + window.frameGeometry().width() + 10, window.y())
     boxes_window.show()

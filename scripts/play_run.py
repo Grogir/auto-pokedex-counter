@@ -35,6 +35,19 @@ def load_file(path) -> dict[str, list[str]] | None:
 
     return loaded
 
+def is_forced_in_previous_section(controller, name: str) -> bool:
+    from pokedex_counter.game_config import ROUTE_SECTIONS
+
+    section_index = controller.current_section() - 1
+    if section_index < 0:
+        return False
+
+    section = ROUTE_SECTIONS[section_index]
+    return any(
+        command.name == "FORCE" and command.parameter == name
+        for command in section.commands_after
+    )
+
 def playback(loaded, controller: GameController) -> None:
     playback = [name for names in loaded.values() for name in names]
     index = 0
@@ -46,7 +59,8 @@ def playback(loaded, controller: GameController) -> None:
 
         name = playback[index]
         index += 1
-        controller.on_caught(name)
+        if not is_forced_in_previous_section(controller, name):
+            controller.on_caught(name)
         QTimer.singleShot(WAIT_MS, play_next)
 
     QTimer.singleShot(0, play_next)
@@ -60,10 +74,15 @@ def main() -> int:
     controller = GameController()
     window = MainWindow()
     boxes_window = BoxesWindow()
+    window.set_calibrated(True)
     controller.count_changed.connect(window.update_counter)
-    window.sprite_strip.set_bonus_names(BONUSES)
-    from pokedex_counter.app import wire_found_pokemon
-    wire_found_pokemon(controller, window.sprite_strip, boxes_window)
+    sprite_strip = window.sprite_strip
+    sprite_strip.set_bonus_names(BONUSES)
+    controller.pokemon_found.connect(sprite_strip.on_pokemon_found)
+    controller.pokemon_found.connect(boxes_window.on_pokemon_found)
+    controller.register_command("box", boxes_window.change_box)
+    controller.register_command("deposit", boxes_window.deposit)
+    controller.register_command("swap", boxes_window.swap)
     window.show()
     boxes_window.move(window.x() + window.frameGeometry().width() + 10, window.y())
     boxes_window.show()

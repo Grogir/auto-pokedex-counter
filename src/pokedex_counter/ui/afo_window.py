@@ -11,7 +11,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pokedex_counter.game_config import ROUTE_SECTIONS, previous_form_of
+from pokedex_counter.game_config import (
+    LAST_CATCH_SECTION,
+    previous_form_of,
+)
 
 AVERAGE_EVO_TIME = {
     "PARAS": 18.75,
@@ -139,7 +142,7 @@ class AfoWindow(QWidget):
 
     def on_pokemon_found(self, name: str, evolved: bool = False) -> None:
         section = self._section_provider()
-        if evolved and section >= len(ROUTE_SECTIONS) - 1:
+        if evolved and section > LAST_CATCH_SECTION:
             return
 
         prev = previous_form_of(name)

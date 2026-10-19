@@ -63,22 +63,29 @@ def previous_form_of(name: str) -> str | None:
 
 ROUTE_SECTIONS = load_route_sections()
 
+def _last_catch_section() -> int:
+    for section_index in reversed(range(len(ROUTE_SECTIONS))):
+        section = ROUTE_SECTIONS[section_index]
+        if set(section.required) != section.evolutions:
+            return section_index
+    return 0
+LAST_CATCH_SECTION = _last_catch_section()
+
 def is_evolution(section_index: int, name: str) -> bool:
     return (
         section_index == len(ROUTE_SECTIONS)
-        or (
-            0 <= section_index < len(ROUTE_SECTIONS)
-            and name in ROUTE_SECTIONS[section_index].evolutions
-        )
+        or
+        section_index > LAST_CATCH_SECTION and name not in ROUTE_SECTIONS[LAST_CATCH_SECTION].bonuses
+        or
+        0 <= section_index < len(ROUTE_SECTIONS) and name in ROUTE_SECTIONS[section_index].evolutions
     )
 
 def _final_section_mons() -> set[str]:
-    """Return the set of Pokémon names that are in the last route section."""
+    """Return the set of Pokémon names that are not caught before the end."""
     mons = set(POKEMON_NAME_TO_DEX.keys())
     for section in ROUTE_SECTIONS:
         mons -= set(section.required)
     return mons
-
 FINAL_SECTION = _final_section_mons()
 
 # Dex numbers that count as a "bonus" catch. Purely cosmetic: with the

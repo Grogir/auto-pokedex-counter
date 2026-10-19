@@ -264,10 +264,7 @@ class BoxesWindow(QWidget):
             self.adjustSize()
 
     def _slot_string(self, row_index: int, slot_index: int) -> str:
-        if row_index == 0 or slot_index <= 3:
-            return f"{slot_index}"
-        else:
-            return f"1+{slot_index - 2}↓"
+        return f"{slot_index}"
 
     def _draw_image(self, label: QLabel, name: str) -> None:
         label.clear()

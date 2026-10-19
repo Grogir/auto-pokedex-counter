@@ -1,179 +1,331 @@
 {
     "0": [
-        "BULBASAUR",
-        "PIDGEY",
-        "CATERPIE",
-        "DUGTRIO",
-        "EKANS",
-        "PARAS",
-        "NIDORAN♀",
-        "NIDORAN♂",
-        "EXEGGCUTE",
-        "MR.MIME"
+        "BULBASAUR"
     ],
     "1": [
-        "GOLEM",
-        "VENOMOTH",
-        "KADABRA",
-        "HYPNO",
-        "RHYDON",
-        "MEWTWO",
-        "MAROWAK",
-        "TAUROS",
-        "CHANSEY",
-        "ALAKAZAM",
-        "KANGASKHAN"
+        "PIDGEY"
     ],
     "2": [
-        "MAGNETON",
-        "SHELLDER",
-        "PSYDUCK",
-        "MAGIKARP",
-        "SEEL",
-        "STARYU",
-        "KRABBY",
-        "ARTICUNO"
+        "CATERPIE"
     ],
     "3": [
-        "ZUBAT",
-        "MACHOP",
-        "ONIX",
-        "MACHAMP",
-        "GEODUDE",
-        "SCYTHER"
+        "DUGTRIO"
     ],
     "4": [
-        "KOFFING",
-        "MOLTRES",
-        "DIGLETT",
-        "SPEAROW",
-        "DROWZEE",
-        "HITMONCHAN",
-        "GROWLITHE",
-        "SANDSHREW",
-        "VENONAT"
+        "EKANS"
     ],
     "5": [
-        "GASTLY",
-        "MAGMAR",
-        "FEAROW",
-        "VULPIX",
-        "GENGAR",
-        "RATTATA",
-        "TENTACOOL",
-        "PIDGEOTTO",
-        "CHARMANDER",
-        "TANGELA"
+        "PARAS"
     ],
     "6": [
-        "DRAGONITE",
-        "SNORLAX",
-        "RATICATE",
-        "RHYHORN",
-        "METAPOD",
-        "KABUTO",
-        "HORSEA",
-        "DODUO",
-        "MEW"
+        "NIDORAN\u2640"
     ],
     "7": [
-        "GOLDEEN",
-        "CUBONE",
-        "JIGGLYPUFF",
-        "EXEGGUTOR",
-        "NIDORINA",
-        "NIDOQUEEN",
-        "ODDISH"
+        "NIDORAN\u2642"
     ],
     "8": [
-        "ZAPDOS",
-        "MAGNEMITE",
-        "VOLTORB",
-        "FARFETCH'D",
-        "PIKACHU",
-        "HITMONLEE",
-        "SQUIRTLE"
+        "EXEGGCUTE"
     ],
     "9": [
-        "DRATINI",
-        "CLEFAIRY",
-        "NIDORINO",
-        "ABRA",
-        "PINSIR",
-        "PORYGON",
-        "MANKEY",
-        "BELLSPROUT",
-        "IVYSAUR",
-        "LAPRAS",
-        "WEEDLE"
+        "MR.MIME"
     ],
     "10": [
-        "OMANYTE",
-        "JYNX",
-        "DITTO",
-        "AERODACTYL",
-        "MEOWTH",
-        "EEVEE",
-        "LICKITUNG",
-        "EEVEE",
-        "SLOWPOKE",
-        "EEVEE",
-        "POLIWAG",
-        "WEEZING",
-        "GRIMER",
-        "PONYTA",
-        "ELECTABUZZ",
-        "MUK",
-        "DRAGONAIR"
+        "GOLEM"
     ],
     "11": [
-        "HAUNTER",
-        "PARASECT",
+        "KADABRA",
+        "DODRIO",
+        "SANDSLASH",
+        "HYPNO",
+        "MAROWAK",
+        "MEWTWO"
+    ],
+    "12": [
+        "TAUROS"
+    ],
+    "13": [
+        "CHANSEY"
+    ],
+    "14": [
+        "ALAKAZAM"
+    ],
+    "15": [
+        "KANGASKHAN"
+    ],
+    "16": [
+        "MAGNETON"
+    ],
+    "17": [
+        "SHELLDER",
+        "SEEL",
+        "PSYDUCK",
+        "KRABBY",
+        "MAGIKARP",
+        "STARYU"
+    ],
+    "18": [
+        "ARTICUNO"
+    ],
+    "19": [
+        "ZUBAT",
+        "MACHOP",
+        "ONIX"
+    ],
+    "20": [
+        "MACHAMP"
+    ],
+    "21": [
+        "GEODUDE"
+    ],
+    "22": [
+        "SCYTHER"
+    ],
+    "23": [
+        "KOFFING"
+    ],
+    "24": [
+        "MOLTRES"
+    ],
+    "25": [
+        "DIGLETT"
+    ],
+    "26": [
+        "DROWZEE",
+        "HITMONCHAN",
+        "SANDSHREW",
+        "VENONAT",
+        "GROWLITHE"
+    ],
+    "27": [
+        "GASTLY"
+    ],
+    "28": [
+        "MAGMAR"
+    ],
+    "29": [
+        "FEAROW"
+    ],
+    "30": [
+        "VULPIX"
+    ],
+    "31": [
+        "GENGAR"
+    ],
+    "32": [
+        "RATTATA",
+        "TENTACOOL"
+    ],
+    "33": [
+        "PIDGEOTTO"
+    ],
+    "34": [
+        "CHARMANDER"
+    ],
+    "35": [
+        "TANGELA"
+    ],
+    "36": [
+        "DRAGONITE"
+    ],
+    "37": [
+        "SNORLAX"
+    ],
+    "38": [
+        "RATICATE",
+        "RHYHORN"
+    ],
+    "39": [
+        "METAPOD"
+    ],
+    "40": [
+        "DODUO"
+    ],
+    "41": [
+        "KABUTO"
+    ],
+    "42": [
+        "HORSEA"
+    ],
+    "43": [
+        "SPEAROW"
+    ],
+    "44": [
+        "MEW"
+    ],
+    "45": [
+        "GOLDEEN"
+    ],
+    "46": [
+        "CUBONE"
+    ],
+    "47": [
+        "JIGGLYPUFF"
+    ],
+    "48": [
+        "EXEGGUTOR"
+    ],
+    "49": [
+        "NIDORINA"
+    ],
+    "50": [
+        "NIDOQUEEN"
+    ],
+    "51": [
+        "ODDISH"
+    ],
+    "52": [
+        "ZAPDOS"
+    ],
+    "53": [
+        "VOLTORB"
+    ],
+    "54": [
+        "PIKACHU"
+    ],
+    "55": [
+        "MAGNEMITE",
+        "FARFETCH'D"
+    ],
+    "57": [
+        "HITMONLEE"
+    ],
+    "58": [
+        "SQUIRTLE"
+    ],
+    "59": [
+        "DRATINI",
+        "CLEFAIRY"
+    ],
+    "60": [
+        "NIDORINO"
+    ],
+    "61": [
+        "ABRA"
+    ],
+    "63": [
+        "PORYGON"
+    ],
+    "64": [
+        "PINSIR"
+    ],
+    "65": [
+        "MANKEY"
+    ],
+    "66": [
+        "BELLSPROUT"
+    ],
+    "67": [
+        "IVYSAUR"
+    ],
+    "68": [
+        "LAPRAS"
+    ],
+    "69": [
+        "WEEDLE"
+    ],
+    "70": [
+        "OMANYTE"
+    ],
+    "71": [
+        "JYNX"
+    ],
+    "72": [
+        "DITTO"
+    ],
+    "73": [
+        "AERODACTYL"
+    ],
+    "74": [
+        "MEOWTH"
+    ],
+    "75": [
+        "EEVEE"
+    ],
+    "76": [
+        "LICKITUNG"
+    ],
+    "77": [
+        "EEVEE",
+        "SLOWPOKE"
+    ],
+    "78": [
+        "EEVEE",
+        "POLIWAG"
+    ],
+    "79": [
+        "WEEZING"
+    ],
+    "80": [
+        "GRIMER"
+    ],
+    "81": [
+        "ELECTABUZZ"
+    ],
+    "82": [
+        "PONYTA"
+    ],
+    "83": [
         "ARBOK",
-        "NIDOKING",
+        "PARASECT",
+        "HAUNTER",
+        "DRAGONAIR",
         "CLEFABLE",
+        "NIDOKING"
+    ],
+    "84": [
         "POLIWHIRL",
         "RAPIDASH",
-        "SLOWBRO",
-        "VAPOREON",
+        "MUK",
         "POLIWRATH",
+        "VAPOREON",
         "JOLTEON",
         "FLAREON",
-        "PRIMEAPE",
-        "PERSIAN",
+        "SLOWBRO",
+        "PERSIAN"
+    ],
+    "85": [
         "OMASTAR",
         "KAKUNA",
         "BEEDRILL",
         "VENUSAUR",
+        "PRIMEAPE",
         "WEEPINBELL",
-        "VICTREEBEL",
-        "SEAKING",
-        "WARTORTLE",
-        "BLASTOISE",
-        "RAICHU",
         "WIGGLYTUFF",
         "GLOOM",
         "ELECTRODE",
         "VILEPLUME",
+        "VICTREEBEL"
+    ],
+    "86": [
+        "RAICHU",
+        "WARTORTLE",
+        "BLASTOISE",
+        "SEAKING"
+    ],
+    "87": [
         "SEADRA",
         "KABUTOPS",
         "BUTTERFREE",
+        "RHYDON",
         "CHARMELEON",
         "CHARIZARD",
         "PIDGEOT",
         "TENTACRUEL",
-        "GRAVELER",
-        "SANDSLASH",
-        "MACHOKE",
-        "DODRIO",
-        "NINETALES",
+        "NINETALES"
+    ],
+    "88": [
         "ARCANINE",
-        "GOLBAT",
-        "KINGLER",
-        "DEWGONG",
         "GYARADOS",
+        "GOLBAT",
+        "MACHOKE",
+        "GRAVELER",
+        "VENOMOTH"
+    ],
+    "89": [
+        "KINGLER",
+        "GOLDUCK",
         "CLOYSTER",
         "STARMIE",
-        "GOLDUCK"
+        "DEWGONG"
     ]
 }

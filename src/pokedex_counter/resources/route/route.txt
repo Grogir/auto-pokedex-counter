@@ -36,10 +36,10 @@ box:4
 Gastly
 Magmar
 Fearow
-Vulpix
+Vulpix - Gengar
 Gengar
-Tentacool - Rattata Raticate
-Pidgeotto - Rattata Raticate
+Tentacool - Rattata Raticate Pidgeotto
+Pidgeotto
 Charmander - Rattata Raticate
 Tangela
 Dragonite
@@ -100,3 +100,9 @@ min:1 Grimer Ponyta - Muk
 Electabuzz - Grimer Ponyta Muk
 Grimer Ponyta - Muk
 evo:Arbok evo:Parasect evo:Haunter evo:Dragonair evo:Clefable evo:Nidoking evo:Kadabra - Muk
+evo:Rapidash evo:Muk evo:Poliwhirl evo:Poliwrath evo:Vaporeon evo:Jolteon evo:Flareon evo:Slowbro evo:Persian
+evo:Omastar evo:Kakuna evo:Beedrill evo:Venusaur evo:Weepinbell evo:Victreebel evo:Primeape
+evo:Wartortle evo:Blastoise evo:Raichu evo:Electrode evo:Gloom evo:Vileplume evo:Wigglytuff evo:Marowak evo:Seaking
+evo:Dodrio evo:Seadra evo:Kabutops evo:Raticate evo:Butterfree evo:Rhydon evo:Charmeleon evo:Charizard evo:Pidgeot evo:Tentacruel evo:Ninetales
+evo:Arcanine evo:Venomoth evo:Hypno evo:Sandslash evo:Golbat evo:Graveler evo:Machoke
+evo:Starmie evo:Kingler evo:Cloyster evo:Gyarados evo:Dewgong evo:Golduck
